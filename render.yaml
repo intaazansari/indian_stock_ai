@@ -172,6 +172,7 @@ services:
     name: isa-redis
     plan: free                          # 25 MB RAM — fine for dev/staging
     maxmemoryPolicy: allkeys-lru
+    ipAllowList: []                     # empty = no external access; internal Render services connect via private URL
 
 databases:
   # ── PostgreSQL ────────────────────────────────────────────────────────────────
