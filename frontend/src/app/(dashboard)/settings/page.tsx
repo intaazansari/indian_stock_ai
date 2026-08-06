@@ -94,6 +94,7 @@ export default function SettingsPage() {
         setAuth({ ...user, full_name: data.full_name }, {
           access_token: localStorage.getItem("access_token") ?? "",
           refresh_token: localStorage.getItem("refresh_token") ?? "",
+          token_type: "bearer",
         });
       }
       setProfileMsg({ text: "Display name updated.", type: "success" });

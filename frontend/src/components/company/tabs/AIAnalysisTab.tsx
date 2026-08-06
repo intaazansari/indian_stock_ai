@@ -46,7 +46,7 @@ export function AIAnalysisTab({ symbol, agentType, title }: Props) {
         </div>
       )}
 
-      {!isLoading && !isStreaming && data && (
+      {!isLoading && !isStreaming && !!data && (
         <div className="px-5 py-4 space-y-4">
           <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed font-sans">
             {JSON.stringify(data, null, 2)}
