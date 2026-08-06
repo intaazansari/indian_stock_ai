@@ -30,7 +30,7 @@ services:
     dockerfilePath: ./infrastructure/docker/backend.Dockerfile
     dockerContext: ./backend
     dockerCommand: >-
-      bash -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2"
+      sh -c "python -m alembic upgrade head && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2"
     plan: free                          # upgrade to starter ($7/mo) for always-on
     healthCheckPath: /health
     autoDeploy: true
@@ -107,7 +107,7 @@ services:
     runtime: docker
     dockerfilePath: ./infrastructure/docker/backend.Dockerfile
     dockerContext: ./backend
-    dockerCommand: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    dockerCommand: python -m celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
     plan: free
     autoDeploy: true
 
