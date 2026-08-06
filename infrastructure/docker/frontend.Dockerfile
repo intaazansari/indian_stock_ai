@@ -55,6 +55,7 @@ USER nextjs
 
 # PORT is injected by Render
 ENV PORT=10000
+ENV HOSTNAME="0.0.0.0"
 EXPOSE $PORT
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
