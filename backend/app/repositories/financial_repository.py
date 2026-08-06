@@ -92,7 +92,6 @@ class FinancialRepository:
             )
             .order_by(
                 KeyRatio.period_year.desc(),
-                nullslast(KeyRatio.period_quarter.desc()),
             )
             .limit(years)
         )
