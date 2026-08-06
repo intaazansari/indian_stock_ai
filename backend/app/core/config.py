@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION_TRANSCRIPTS: str = "earnings_transcripts"
 
     # ── OpenAI-compatible ──────────────────────────────────────────────
-    OPENAI_API_KEY: str
+    OPENAI_API_KEY: str = ""            # Required for AI features; set in Render dashboard
     OPENAI_BASE_URL: str | None = None   # Set to override endpoint (e.g. Groq, Azure, Ollama)
     OPENAI_ANALYSIS_MODEL: str = "gpt-4o"
     OPENAI_SUMMARY_MODEL: str = "gpt-4o-mini"
