@@ -1,0 +1,21 @@
+# ─── Line ending normalisation ─────────────────────────────────────────────────
+# Always store with LF in the repo; Git converts on checkout per OS.
+* text=auto eol=lf
+
+# Binary files — no conversion
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.svg  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary
+*.pdf  binary
+*.zip  binary
+*.gz   binary
+
+# Shell scripts — always LF
+*.sh   text eol=lf
