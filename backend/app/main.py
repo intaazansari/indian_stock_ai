@@ -14,7 +14,6 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_v1_router
@@ -61,12 +60,6 @@ def create_application() -> FastAPI:
         redoc_url="/api/redoc" if settings.DEBUG else None,
         openapi_url="/api/openapi.json" if settings.DEBUG else None,
         lifespan=lifespan,
-    )
-
-    # ── Security: only allow known hosts (prevents Host header attacks) ────────
-    application.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=settings.ALLOWED_HOSTS,
     )
 
     # ── CORS: tightly scoped ───────────────────────────────────────────────────
