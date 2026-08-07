@@ -21,7 +21,7 @@ export function CompanyHeader({ symbol }: CompanyHeaderProps) {
     queryKey: ["watchlist"],
     queryFn: watchlistApi.list,
     enabled: isAuthenticated,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
   const watchlistEntry = company
     ? watchlistItems.find((w) => w.nse_symbol === symbol)
