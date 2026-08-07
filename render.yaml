@@ -87,10 +87,10 @@ services:
       # ── CORS / Hosts — SET IN DASHBOARD after frontend URL is known ────────
       # Example: CORS_ORIGINS=["https://isa-frontend.onrender.com"]
       - key: CORS_ORIGINS
-        value: '["https://isa-frontend.onrender.com","http://localhost:3000"]'
+        value: '["https://isa-frontend-otyp.onrender.com","http://localhost:3000"]'
       # Example: ALLOWED_HOSTS=["isa-backend.onrender.com"]
       - key: ALLOWED_HOSTS
-        value: '["isa-backend.onrender.com","localhost","127.0.0.1"]'
+        value: '["isa-backend-bpbt.onrender.com","localhost","127.0.0.1"]'
 
       # ── Qdrant (optional — skip for Phase 1) ─────────────────────────────
       # Leave blank/missing to disable. Set to Qdrant Cloud URL to enable.
@@ -161,7 +161,7 @@ services:
       # NEXT_PUBLIC_API_URL must be the full backend URL
       # After first deploy, update this to: https://isa-backend.onrender.com
       - key: NEXT_PUBLIC_API_URL
-        sync: false                     # set in dashboard: https://isa-backend.onrender.com
+        value: https://isa-backend-bpbt.onrender.com
       - key: NEXT_PUBLIC_APP_NAME
         value: "StockSage AI"
 
