@@ -16,11 +16,11 @@ _cache: dict[str, Any] = {}
 _CACHE_TTL = 60  # seconds
 
 INDICES = [
-    {"symbol": "^NSEI",      "name": "NIFTY 50",     "short": "NIFTY"},
-    {"symbol": "^BSESN",     "name": "SENSEX",        "short": "SENSEX"},
-    {"symbol": "^NSEBANK",   "name": "NIFTY Bank",    "short": "BANK"},
-    {"symbol": "NIFTYIT.NS", "name": "NIFTY IT",      "short": "IT"},
-    {"symbol": "^CNXMIDCAP", "name": "NIFTY Midcap",  "short": "MIDCAP"},
+    {"symbol": "^NSEI",        "name": "NIFTY 50",     "short": "NIFTY"},
+    {"symbol": "^BSESN",       "name": "SENSEX",        "short": "SENSEX"},
+    {"symbol": "^NSEBANK",     "name": "NIFTY Bank",    "short": "BANK"},
+    {"symbol": "NIFTYIT.NS",   "name": "NIFTY IT",      "short": "IT"},
+    {"symbol": "^CNXPHARMA",  "name": "NIFTY Pharma",  "short": "PHARMA"},
 ]
 
 
@@ -28,7 +28,22 @@ def _fetch_index(ticker_symbol: str) -> dict[str, Any]:
     t = yf.Ticker(ticker_symbol)
     info = t.fast_info
     price = float(info.last_price or 0)
-    prev  = float(info.previous_close or price)
+
+    # fast_info.previous_close is unreliable for some Indian indices —
+    # fall back to the last two rows of 1d history if price or prev is zero.
+    prev = float(info.previous_close or 0)
+    if price == 0 or prev == 0:
+        hist = t.history(period="5d", interval="1d")
+        if len(hist) >= 2:
+            price = float(hist["Close"].iloc[-1])
+            prev  = float(hist["Close"].iloc[-2])
+        elif len(hist) == 1:
+            price = float(hist["Close"].iloc[-1])
+            prev  = price
+
+    if price == 0:
+        raise ValueError(f"No price data for {ticker_symbol}")
+
     change = price - prev
     change_pct = (change / prev * 100) if prev else 0.0
     return {
