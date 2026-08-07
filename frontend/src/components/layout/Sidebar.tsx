@@ -26,12 +26,15 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-56 shrink-0 bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-900 h-full">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 h-16 border-b border-gray-100 dark:border-gray-900">
+      <Link
+        href="/dashboard"
+        className="flex items-center gap-2.5 px-4 h-16 border-b border-gray-100 dark:border-gray-900 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
+      >
         <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
           <Brain className="w-4 h-4 text-white" />
         </div>
         <span className="font-semibold text-gray-900 dark:text-white text-sm">StockSage AI</span>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
