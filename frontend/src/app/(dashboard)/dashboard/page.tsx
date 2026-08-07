@@ -1,4 +1,3 @@
-import { SearchBar } from "@/components/layout/SearchBar";
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -12,16 +11,13 @@ export default function DashboardHomePage() {
       <MarketOverview />
 
       {/* ── Discovery Header ─────────────────────────────────────────────── */}
-      <div className="text-center py-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+      <div className="text-center py-4">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Discover Indian businesses
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-8">
-          Search any NSE or BSE listed company
+        <p className="text-gray-500 dark:text-gray-400">
+          Search any NSE or BSE listed company using the search bar above
         </p>
-        <div className="max-w-xl mx-auto">
-          <SearchBar size="large" />
-        </div>
       </div>
 
       {/* ── Quick Access ─────────────────────────────────────────────────── */}
