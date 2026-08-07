@@ -1,4 +1,5 @@
 import { SearchBar } from "@/components/layout/SearchBar";
+import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -7,8 +8,11 @@ export const metadata: Metadata = { title: "Dashboard — StockSage AI" };
 export default function DashboardHomePage() {
   return (
     <div className="space-y-8">
+      {/* ── Market Overview ──────────────────────────────────────────────── */}
+      <MarketOverview />
+
       {/* ── Discovery Header ─────────────────────────────────────────────── */}
-      <div className="text-center py-12">
+      <div className="text-center py-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
           Discover Indian businesses
         </h1>
