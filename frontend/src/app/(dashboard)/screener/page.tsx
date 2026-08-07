@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   SlidersHorizontal, ArrowUpDown, ArrowUp, ArrowDown,
-  ChevronLeft, ChevronRight, RotateCcw, Search,
+  ChevronLeft, ChevronRight, RotateCcw, Search, X,
 } from "lucide-react";
 import { screenerApi, type ScreenerFilter, type ScreenerResult, type SortField } from "@/lib/api/screener";
 import { cn, formatCr } from "@/lib/utils";
@@ -127,6 +127,7 @@ export default function ScreenerPage() {
   const router = useRouter();
   const [filters, setFilters] = useState<ScreenerFilter>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<ScreenerFilter>(DEFAULT_FILTERS);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Load sectors for dropdown
   const { data: sectors = [] } = useQuery({
@@ -185,10 +186,33 @@ export default function ScreenerPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex gap-6">
-      {/* ── LEFT: Filter panel ───────────────────────────────────────────── */}
-      <aside className="w-64 shrink-0 space-y-5">
-        {/* Header */}
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* ── Mobile filter drawer overlay ─────────────────────────────────── */}
+      {mobileFiltersOpen && (
+        <div className="lg:hidden fixed inset-0 z-40 flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileFiltersOpen(false)} />
+          <div className="relative ml-auto w-80 max-w-full bg-white dark:bg-gray-950 h-full overflow-y-auto p-5 space-y-5 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-brand-600" />
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Filters</h2>
+              </div>
+              <button onClick={() => setMobileFiltersOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            <FilterContent
+              filters={filters} sectors={sectors}
+              setFilters={setFilters} reset={reset}
+              apply={() => { apply(); setMobileFiltersOpen(false); }}
+              applyPreset={(p) => { applyPreset(p); setMobileFiltersOpen(false); }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── LEFT: Filter panel (desktop only) ───────────────────────────── */}
+      <aside className="hidden lg:block w-64 shrink-0 space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-brand-600" />
@@ -201,90 +225,27 @@ export default function ScreenerPage() {
             <RotateCcw className="w-3 h-3" /> Reset
           </button>
         </div>
-
-        {/* Presets */}
-        <div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Quick Presets</p>
-          <div className="flex flex-col gap-1">
-            {PRESETS.map((p) => (
-              <button
-                key={p.label}
-                onClick={() => applyPreset(p)}
-                className="text-left text-xs px-3 py-1.5 rounded-lg border border-gray-100 dark:border-gray-900 hover:border-brand-200 hover:bg-brand-50 dark:hover:border-brand-900 dark:hover:bg-brand-950 text-gray-600 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-300 transition-all"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Sector */}
-        <div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Sector</p>
-          <select
-            value={filters.sector ?? ""}
-            onChange={(e) => setFilters((f) => ({ ...f, sector: e.target.value || null }))}
-            className="w-full px-2 py-1.5 text-sm rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-          >
-            <option value="">All sectors</option>
-            {sectors.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Valuation */}
-        <FilterSection title="Valuation">
-          <NumInput label="P/E max"  value={filters.pe_max  ?? null} onChange={(v) => setFilters((f) => ({ ...f, pe_max: v }))}  placeholder="e.g. 25" />
-          <NumInput label="P/E min"  value={filters.pe_min  ?? null} onChange={(v) => setFilters((f) => ({ ...f, pe_min: v }))}  placeholder="e.g. 5" />
-          <NumInput label="P/B max"  value={filters.pb_max  ?? null} onChange={(v) => setFilters((f) => ({ ...f, pb_max: v }))}  placeholder="e.g. 5" />
-        </FilterSection>
-
-        {/* Profitability */}
-        <FilterSection title="Profitability">
-          <NumInput label="ROCE min (%)" value={filters.roce_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, roce_min: v }))} placeholder="e.g. 15" />
-          <NumInput label="ROE min (%)"  value={filters.roe_min  ?? null} onChange={(v) => setFilters((f) => ({ ...f, roe_min: v }))}  placeholder="e.g. 12" />
-          <NumInput label="Net margin min (%)" value={filters.net_profit_margin_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, net_profit_margin_min: v }))} placeholder="e.g. 10" />
-        </FilterSection>
-
-        {/* Growth */}
-        <FilterSection title="Growth (YoY %)">
-          <NumInput label="Revenue growth min" value={filters.revenue_growth_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, revenue_growth_min: v }))} placeholder="e.g. 10" />
-          <NumInput label="PAT growth min"     value={filters.pat_growth_min    ?? null} onChange={(v) => setFilters((f) => ({ ...f, pat_growth_min: v }))}     placeholder="e.g. 10" />
-        </FilterSection>
-
-        {/* Financial Health */}
-        <FilterSection title="Financial Health">
-          <NumInput label="D/E ratio max"     value={filters.debt_equity_max  ?? null} onChange={(v) => setFilters((f) => ({ ...f, debt_equity_max: v }))}  placeholder="e.g. 1" />
-          <NumInput label="Current ratio min" value={filters.current_ratio_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, current_ratio_min: v }))} placeholder="e.g. 1.5" />
-        </FilterSection>
-
-        {/* Market Cap */}
-        <FilterSection title="Market Cap (₹ Cr)">
-          <NumInput label="Min" value={filters.market_cap_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, market_cap_min: v }))} placeholder="e.g. 10000" />
-          <NumInput label="Max" value={filters.market_cap_max ?? null} onChange={(v) => setFilters((f) => ({ ...f, market_cap_max: v }))} placeholder="e.g. 500000" />
-        </FilterSection>
-
-        {/* Ownership */}
-        <FilterSection title="Ownership">
-          <NumInput label="Promoter holding min (%)" value={filters.promoter_holding_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, promoter_holding_min: v }))} placeholder="e.g. 50" />
-        </FilterSection>
-
-        {/* Apply */}
-        <button
-          onClick={apply}
-          className="w-full py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
-        >
-          <Search className="w-3.5 h-3.5" />
-          Apply filters
-        </button>
+        <FilterContent
+          filters={filters} sectors={sectors}
+          setFilters={setFilters} reset={reset}
+          apply={apply} applyPreset={applyPreset}
+        />
       </aside>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Filters</h2>
+          </div>
+          <button
+            onClick={reset}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+          >
+            <RotateCcw className="w-3 h-3" /> Reset
+          </button>
+        </div>
 
       {/* ── RIGHT: Results ──────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 space-y-4">
         {/* Toolbar */}
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Stock Screener</h1>
             {!isFetching && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -293,9 +254,15 @@ export default function ScreenerPage() {
             )}
           </div>
 
-          {/* Sort dropdown */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Sort by</span>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Mobile filter button */}
+            <button
+              onClick={() => setMobileFiltersOpen(true)}
+              className="lg:hidden flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Filters
+            </button>
             <select
               value={appliedFilters.sort_by}
               onChange={(e) => toggleSort(e.target.value as SortField)}
@@ -392,6 +359,97 @@ export default function ScreenerPage() {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+function FilterContent({
+  filters, sectors, setFilters, reset, apply, applyPreset,
+}: {
+  filters: ScreenerFilter;
+  sectors: string[];
+  setFilters: React.Dispatch<React.SetStateAction<ScreenerFilter>>;
+  reset: () => void;
+  apply: () => void;
+  applyPreset: (p: typeof PRESETS[number]) => void;
+}) {
+  return (
+    <div className="space-y-5">
+      {/* Reset — mobile only (desktop has it in the aside header) */}
+      <button
+        onClick={reset}
+        className="lg:hidden flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+      >
+        <RotateCcw className="w-3 h-3" /> Reset all
+      </button>
+
+      {/* Presets */}
+      <div>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Quick Presets</p>
+        <div className="flex flex-col gap-1">
+          {PRESETS.map((p) => (
+            <button
+              key={p.label}
+              onClick={() => applyPreset(p)}
+              className="text-left text-xs px-3 py-1.5 rounded-lg border border-gray-100 dark:border-gray-900 hover:border-brand-200 hover:bg-brand-50 dark:hover:border-brand-900 dark:hover:bg-brand-950 text-gray-600 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-300 transition-all"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Sector */}
+      <div>
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Sector</p>
+        <select
+          value={filters.sector ?? ""}
+          onChange={(e) => setFilters((f) => ({ ...f, sector: e.target.value || null }))}
+          className="w-full px-2 py-1.5 text-sm rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+        >
+          <option value="">All sectors</option>
+          {sectors.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      <FilterSection title="Valuation">
+        <NumInput label="P/E max" value={filters.pe_max ?? null} onChange={(v) => setFilters((f) => ({ ...f, pe_max: v }))} placeholder="e.g. 25" />
+        <NumInput label="P/E min" value={filters.pe_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, pe_min: v }))} placeholder="e.g. 5" />
+        <NumInput label="P/B max" value={filters.pb_max ?? null} onChange={(v) => setFilters((f) => ({ ...f, pb_max: v }))} placeholder="e.g. 5" />
+      </FilterSection>
+
+      <FilterSection title="Profitability">
+        <NumInput label="ROCE min (%)" value={filters.roce_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, roce_min: v }))} placeholder="e.g. 15" />
+        <NumInput label="ROE min (%)"  value={filters.roe_min  ?? null} onChange={(v) => setFilters((f) => ({ ...f, roe_min: v }))}  placeholder="e.g. 12" />
+        <NumInput label="Net margin min (%)" value={filters.net_profit_margin_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, net_profit_margin_min: v }))} placeholder="e.g. 10" />
+      </FilterSection>
+
+      <FilterSection title="Growth (YoY %)">
+        <NumInput label="Revenue growth min" value={filters.revenue_growth_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, revenue_growth_min: v }))} placeholder="e.g. 10" />
+        <NumInput label="PAT growth min"     value={filters.pat_growth_min    ?? null} onChange={(v) => setFilters((f) => ({ ...f, pat_growth_min: v }))}     placeholder="e.g. 10" />
+      </FilterSection>
+
+      <FilterSection title="Financial Health">
+        <NumInput label="D/E ratio max"     value={filters.debt_equity_max   ?? null} onChange={(v) => setFilters((f) => ({ ...f, debt_equity_max: v }))}   placeholder="e.g. 1" />
+        <NumInput label="Current ratio min" value={filters.current_ratio_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, current_ratio_min: v }))} placeholder="e.g. 1.5" />
+      </FilterSection>
+
+      <FilterSection title="Market Cap (₹ Cr)">
+        <NumInput label="Min" value={filters.market_cap_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, market_cap_min: v }))} placeholder="e.g. 10000" />
+        <NumInput label="Max" value={filters.market_cap_max ?? null} onChange={(v) => setFilters((f) => ({ ...f, market_cap_max: v }))} placeholder="e.g. 500000" />
+      </FilterSection>
+
+      <FilterSection title="Ownership">
+        <NumInput label="Promoter holding min (%)" value={filters.promoter_holding_min ?? null} onChange={(v) => setFilters((f) => ({ ...f, promoter_holding_min: v }))} placeholder="e.g. 50" />
+      </FilterSection>
+
+      <button
+        onClick={apply}
+        className="w-full py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+      >
+        <Search className="w-3.5 h-3.5" />
+        Apply filters
+      </button>
+    </div>
+  );
+}
 
 function FilterSection({
   title, children,
