@@ -231,15 +231,6 @@ export default function ScreenerPage() {
           apply={apply} applyPreset={applyPreset}
         />
       </aside>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Filters</h2>
-          </div>
-          <button
-            onClick={reset}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          >
-            <RotateCcw className="w-3 h-3" /> Reset
-          </button>
-        </div>
 
       {/* ── RIGHT: Results ──────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 space-y-4">
