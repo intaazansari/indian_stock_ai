@@ -12,7 +12,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
               <Brain className="w-4 h-4 text-white" />
             </div>
-            <span className="font-semibold text-gray-900 dark:text-white">StockSage AI</span>
+            <span className="font-semibold text-gray-900 dark:text-white">ValuePilotage</span>
           </div>
           <div className="flex items-center gap-4">
             <Link
@@ -44,7 +44,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="mt-6 text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-          StockSage AI transforms financial data into investor understanding.
+          ValuePilotage transforms financial data into investor understanding.
           Get research-analyst quality insights on any NSE-listed company in seconds.
         </p>
 

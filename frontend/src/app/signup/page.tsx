@@ -44,7 +44,7 @@ export default function SignupPage() {
           <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
             <Brain className="w-4 h-4 text-white" />
           </div>
-          <span className="font-semibold text-gray-900 dark:text-white">StockSage AI</span>
+          <span className="font-semibold text-gray-900 dark:text-white">ValuePilotage</span>
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-8">

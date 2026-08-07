@@ -2,7 +2,7 @@ import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import Link from "next/link";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Dashboard — StockSage AI" };
+export const metadata: Metadata = { title: "Dashboard — ValuePilotage" };
 
 export default function DashboardHomePage() {
   return (

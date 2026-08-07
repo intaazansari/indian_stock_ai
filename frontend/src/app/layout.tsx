@@ -8,8 +8,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: {
-    default: "StockSage AI — Indian Stock Research",
-    template: "%s | StockSage AI",
+    default: "ValuePilotage — Indian Stock Research",
+    template: "%s | ValuePilotage",
   },
   description:
     "AI-powered Indian stock fundamental analysis. Understand businesses, not just data.",
@@ -17,8 +17,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://stocksage.ai",
-    siteName: "StockSage AI",
+    url: "https://valuepilotage.com",
+    siteName: "ValuePilotage",
   },
 };
 

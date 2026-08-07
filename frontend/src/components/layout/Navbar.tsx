@@ -25,7 +25,7 @@ export function Navbar() {
         <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
           <Brain className="w-4 h-4 text-white" />
         </div>
-        <span className="font-semibold text-gray-900 dark:text-white text-sm">StockSage AI</span>
+        <span className="font-semibold text-gray-900 dark:text-white text-sm">ValuePilotage</span>
       </Link>
 
       <div className="flex-1 max-w-md">
