@@ -5,7 +5,7 @@
 /* ── CSS Custom Properties ────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 214 32% 96%;   /* soft blue-gray instead of pure white */
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
