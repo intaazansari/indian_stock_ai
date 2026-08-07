@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   SlidersHorizontal, ArrowUpDown, ArrowUp, ArrowDown,
   ChevronLeft, ChevronRight, RotateCcw, Search,
@@ -13,15 +12,61 @@ import { cn, formatCr } from "@/lib/utils";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(val: number | null, decimals = 1): string {
+function fmtCmp(val: number | null): string {
   if (val == null) return "—";
-  return val.toFixed(decimals);
+  return `₹${val.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 
-function fmtPct(val: number | null): string {
-  if (val == null) return "—";
-  return `${val.toFixed(1)}%`;
+// Sector → subtle pill colour (bg + text)
+const SECTOR_COLOURS: Record<string, string> = {
+  "Technology":            "bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  "Financial Services":    "bg-blue-50   text-blue-700   dark:bg-blue-950   dark:text-blue-300",
+  "Healthcare":            "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  "Consumer Goods":        "bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+  "Industrials":           "bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300",
+  "Energy":                "bg-red-50    text-red-700    dark:bg-red-950    dark:text-red-300",
+  "Materials":             "bg-stone-50  text-stone-700  dark:bg-stone-900  dark:text-stone-300",
+  "Utilities":             "bg-cyan-50   text-cyan-700   dark:bg-cyan-950   dark:text-cyan-300",
+  "Real Estate":           "bg-pink-50   text-pink-700   dark:bg-pink-950   dark:text-pink-300",
+  "Communication":         "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+};
+function sectorCls(sector: string | null) {
+  if (!sector) return "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400";
+  return SECTOR_COLOURS[sector] ?? "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400";
 }
+
+// Quality signal: 0=unknown, 1=poor, 2=fair, 3=good
+type Signal = 0 | 1 | 2 | 3;
+function quality(c: ScreenerResult): [Signal, Signal, Signal] {
+  function sig(val: number | null, good: number, bad: number, lowerBetter = false): Signal {
+    if (val == null) return 0;
+    if (!lowerBetter) return val >= good ? 3 : val >= bad ? 2 : 1;
+    return val <= good ? 3 : val <= bad ? 2 : 1;
+  }
+  const profitability: Signal = sig(
+    c.roce_pct != null ? Number(c.roce_pct) : c.roe_pct != null ? Number(c.roe_pct) : null,
+    20, 10
+  );
+  const growth: Signal = sig(
+    c.revenue_growth_pct != null ? Number(c.revenue_growth_pct) : null,
+    15, 0
+  );
+  const health: Signal = sig(
+    c.debt_equity_ratio != null ? Number(c.debt_equity_ratio) : null,
+    0.5, 2, true
+  );
+  return [profitability, growth, health];
+}
+
+const SIGNAL_CLS: Record<Signal, string> = {
+  0: "bg-gray-200 dark:bg-gray-700",
+  1: "bg-red-400 dark:bg-red-500",
+  2: "bg-amber-400 dark:bg-amber-500",
+  3: "bg-emerald-500 dark:bg-emerald-400",
+};
+const SIGNAL_TITLE: Record<Signal, string> = {
+  0: "No data", 1: "Poor", 2: "Fair", 3: "Good",
+};
 
 const SORT_LABELS: Record<SortField, string> = {
   market_cap:            "Market Cap",
@@ -277,14 +322,16 @@ export default function ScreenerPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-900/50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400 w-48">Company</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400 w-52">Company</th>
+                  <th className="px-3 py-3 text-center font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap" title="Profitability · Growth · Debt health">Quality</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">CMP (₹)</th>
                   <SortTh field="market_cap"            label="Mkt Cap (Cr)"  current={appliedFilters} onClick={toggleSort} />
                   <SortTh field="pe_ratio"              label="P/E"           current={appliedFilters} onClick={toggleSort} />
                   <SortTh field="pb_ratio"              label="P/B"           current={appliedFilters} onClick={toggleSort} />
                   <SortTh field="roce_pct"              label="ROCE %"        current={appliedFilters} onClick={toggleSort} />
                   <SortTh field="roe_pct"               label="ROE %"         current={appliedFilters} onClick={toggleSort} />
-                  <SortTh field="net_profit_margin_pct" label="Net Margin"    current={appliedFilters} onClick={toggleSort} />
-                  <SortTh field="revenue_growth_pct"    label="Rev. Growth"   current={appliedFilters} onClick={toggleSort} />
+                  <SortTh field="revenue_growth_pct"    label="Rev Gr %"      current={appliedFilters} onClick={toggleSort} />
+                  <SortTh field="pat_growth_pct"        label="PAT Gr %"      current={appliedFilters} onClick={toggleSort} />
                   <SortTh field="debt_equity_ratio"     label="D/E"           current={appliedFilters} onClick={toggleSort} />
                 </tr>
               </thead>
@@ -292,7 +339,7 @@ export default function ScreenerPage() {
                 {isFetching && items.length === 0 ? (
                   [...Array(8)].map((_, i) => (
                     <tr key={i} className="border-b border-gray-50 dark:border-gray-900">
-                      {[...Array(9)].map((_, j) => (
+                      {[...Array(11)].map((_, j) => (
                         <td key={j} className="px-4 py-3">
                           <div className="h-4 skeleton rounded w-full" />
                         </td>
@@ -301,7 +348,7 @@ export default function ScreenerPage() {
                   ))
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-16 text-gray-400 dark:text-gray-500">
+                    <td colSpan={11} className="text-center py-16 text-gray-400 dark:text-gray-500">
                       No companies match the current filters.
                     </td>
                   </tr>
@@ -393,48 +440,70 @@ function SortTh({
 function ResultRow({ company: c }: { company: ScreenerResult }) {
   const router = useRouter();
   const symbol = c.nse_symbol;
+  const [prof, grow, health] = quality(c);
 
   return (
     <tr
       onClick={() => symbol && router.push(`/company/${symbol}`)}
-      className="border-b border-gray-50 dark:border-gray-900 hover:bg-gray-50 dark:hover:bg-gray-900/50 cursor-pointer transition-colors group"
+      className="border-b border-gray-50 dark:border-gray-900 hover:bg-brand-50/40 dark:hover:bg-brand-950/30 cursor-pointer transition-colors group"
     >
-      {/* Company name */}
+      {/* Company name + sector badge */}
       <td className="px-4 py-3">
-        <p className="font-medium text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors text-sm leading-tight">
+        <p className="font-medium text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors text-sm leading-tight truncate max-w-[180px]">
           {c.name}
         </p>
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           {symbol && (
             <span className="text-xs font-mono text-brand-600 dark:text-brand-400">{symbol}</span>
           )}
           {c.sector && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[100px]">{c.sector}</span>
+            <span className={cn(
+              "text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none",
+              sectorCls(c.sector)
+            )}>
+              {c.sector}
+            </span>
           )}
         </div>
       </td>
 
-      {/* Numeric columns */}
+      {/* Quality dots: profitability · growth · debt */}
+      <td className="px-3 py-3">
+        <div className="flex items-center justify-center gap-1" title={`Profitability: ${SIGNAL_TITLE[prof]} · Growth: ${SIGNAL_TITLE[grow]} · Debt: ${SIGNAL_TITLE[health]}`}>
+          <span className={cn("w-2.5 h-2.5 rounded-full", SIGNAL_CLS[prof])} />
+          <span className={cn("w-2.5 h-2.5 rounded-full", SIGNAL_CLS[grow])} />
+          <span className={cn("w-2.5 h-2.5 rounded-full", SIGNAL_CLS[health])} />
+        </div>
+      </td>
+
+      {/* CMP */}
+      <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300 font-medium">
+        {fmtCmp(c.cmp)}
+      </td>
+
+      {/* Market Cap */}
       <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">
         {c.market_cap_cr ? formatCr(Number(c.market_cap_cr)) : "—"}
       </td>
-      <NumCell value={c.pe_ratio}              warn={(v) => v > 50} good={(v) => v < 20 && v > 0} />
-      <NumCell value={c.pb_ratio}              warn={(v) => v > 10} good={(v) => v < 3} />
-      <NumCell value={c.roce_pct}    pct       good={(v) => v > 20} warn={(v) => v < 10} />
-      <NumCell value={c.roe_pct}     pct       good={(v) => v > 15} warn={(v) => v < 8} />
-      <NumCell value={c.net_profit_margin_pct} pct good={(v) => v > 15} warn={(v) => v < 5} />
-      <NumCell value={c.revenue_growth_pct}    pct good={(v) => v > 15} warn={(v) => v < 0} />
-      <NumCell value={c.debt_equity_ratio}         good={(v) => v < 0.5} warn={(v) => v > 2} />
+
+      <NumCell value={c.pe_ratio}           warn={(v) => v > 50} good={(v) => v < 20 && v > 0} />
+      <NumCell value={c.pb_ratio}           warn={(v) => v > 10} good={(v) => v < 3 && v > 0} />
+      <NumCell value={c.roce_pct}      pct  good={(v) => v > 20} warn={(v) => v < 10} />
+      <NumCell value={c.roe_pct}       pct  good={(v) => v > 15} warn={(v) => v < 8} />
+      <NumCell value={c.revenue_growth_pct} pct good={(v) => v > 15} warn={(v) => v < 0} signed />
+      <NumCell value={c.pat_growth_pct}     pct good={(v) => v > 15} warn={(v) => v < 0} signed />
+      <NumCell value={c.debt_equity_ratio}      good={(v) => v < 0.5} warn={(v) => v > 2} />
     </tr>
   );
 }
 
 function NumCell({
-  value, pct = false,
+  value, pct = false, signed = false,
   good, warn,
 }: {
   value: number | null;
   pct?: boolean;
+  signed?: boolean;
   good?: (v: number) => boolean;
   warn?: (v: number) => boolean;
 }) {
@@ -443,7 +512,7 @@ function NumCell({
       <td className="px-4 py-3 text-right text-gray-300 dark:text-gray-600 tabular-nums">—</td>
     );
   }
-  const n = Number(value);           // Decimal fields come back as strings from Python
+  const n = Number(value);
   if (isNaN(n)) {
     return (
       <td className="px-4 py-3 text-right text-gray-300 dark:text-gray-600 tabular-nums">—</td>
@@ -451,6 +520,7 @@ function NumCell({
   }
   const isGood = good?.(n);
   const isWarn = warn?.(n);
+  const prefix = signed && n > 0 ? "+" : "";
   return (
     <td
       className={cn(
@@ -460,7 +530,8 @@ function NumCell({
         "text-gray-700 dark:text-gray-300"
       )}
     >
-      {pct ? `${n.toFixed(1)}%` : n.toFixed(1)}
+      {prefix}{pct ? `${n.toFixed(1)}%` : n.toFixed(1)}
     </td>
   );
 }
+
