@@ -80,20 +80,21 @@ export default function LandingPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {FEATURES.map((feature) => (
-            <div
+            <Link
               key={feature.title}
-              className="p-6 rounded-xl border border-gray-100 dark:border-gray-900 hover:border-gray-200 dark:hover:border-gray-800 transition-colors"
+              href={feature.href}
+              className="p-6 rounded-xl border border-gray-100 dark:border-gray-900 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-sm transition-all group"
             >
-              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-900 flex items-center justify-center mb-4">
-                <feature.icon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-900 flex items-center justify-center mb-4 group-hover:bg-brand-50 dark:group-hover:bg-brand-950 transition-colors">
+                <feature.icon className="w-5 h-5 text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors" />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                 {feature.title}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                 {feature.description}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -116,36 +117,42 @@ const FEATURES = [
   {
     icon: Brain,
     title: "AI Executive Summary",
+    href: "/company/RELIANCE/research",
     description:
       "Understand a company's business model, competitive moat, and investment case in 60 seconds — written like a research analyst, not a data dump.",
   },
   {
     icon: BarChart3,
     title: "Quality Score Card",
+    href: "/company/RELIANCE/quality",
     description:
       "5-dimension quality score: Business Quality, Financial Health, Management, Growth, and Valuation — each with a plain-English explanation.",
   },
   {
     icon: Shield,
     title: "Red Flag Detector",
+    href: "/company/RELIANCE/risks",
     description:
       "AI-powered forensic analysis that flags accounting irregularities, governance issues, and financial stress before they become problems.",
   },
   {
     icon: TrendingUp,
     title: "10-Year Financial Trends",
+    href: "/company/RELIANCE/financials",
     description:
       "P&L, Balance Sheet, and Cash Flow with AI commentary explaining what the numbers mean for the business — not just what they are.",
   },
   {
     icon: Zap,
     title: "Quarterly Results Analysis",
+    href: "/company/RELIANCE/research",
     description:
       "Instant AI analysis every time quarterly results drop. Understand what changed, what management said, and what to watch next quarter.",
   },
   {
     icon: ArrowRight,
     title: "Peer Comparison",
+    href: "/company/RELIANCE/peers",
     description:
       "Side-by-side comparison with peers, with AI explaining why one company trades at a premium or discount to the other.",
   },
