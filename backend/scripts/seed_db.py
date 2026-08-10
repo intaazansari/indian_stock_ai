@@ -340,13 +340,22 @@ async def seed_company(
 
         # ── 3. Compute key ratios ──────────────────────────────────────────
         # Merge Screener.in (older years) with yfinance (recent years with more
-        # fields). yfinance rows take precedence for overlapping years.
+        # fields). Field-level merge: yfinance non-None values win; yfinance
+        # None values fall back to Screener.in (preserves ebitda/ebit/eps for
+        # years where yfinance omits them, e.g. FY2022).
         def _merge_by_year(scrn: list[dict], yfin: list[dict]) -> list[dict]:
             merged: dict[int, dict] = {}
             for row in scrn:
-                merged[row["period_year"]] = row
+                merged[row["period_year"]] = dict(row)
             for row in yfin:
-                merged[row["period_year"]] = row   # yfinance wins
+                year = row["period_year"]
+                if year in merged:
+                    # Apply yfinance values only where non-None
+                    for k, v in row.items():
+                        if v is not None:
+                            merged[year][k] = v
+                else:
+                    merged[year] = dict(row)
             return list(merged.values())
 
         all_income = _merge_by_year(
