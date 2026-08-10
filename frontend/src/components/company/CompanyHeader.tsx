@@ -1,6 +1,7 @@
 "use client";
 
-import { Brain, BookmarkPlus, BookmarkCheck, ExternalLink, Loader2, Wifi, WifiOff } from "lucide-react";
+import { Brain, BookmarkPlus, BookmarkCheck, ExternalLink, Loader2, Wifi, WifiOff, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ interface CompanyHeaderProps {
 }
 
 export function CompanyHeader({ symbol }: CompanyHeaderProps) {
+  const router = useRouter();
   const { data: company, isLoading } = useCompany(symbol);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const queryClient = useQueryClient();
@@ -68,6 +70,14 @@ export function CompanyHeader({ symbol }: CompanyHeaderProps) {
     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
       {/* Left: Company Identity */}
       <div>
+        {/* Back button */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-3 transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+          Back
+        </button>
         <div className="flex items-center gap-3 mb-1">
           {/* Company name */}
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
