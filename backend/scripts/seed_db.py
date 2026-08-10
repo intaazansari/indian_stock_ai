@@ -339,11 +339,34 @@ async def seed_company(
                 screener.close()
 
         # ── 3. Compute key ratios ──────────────────────────────────────────
+        # Merge Screener.in (older years) with yfinance (recent years with more
+        # fields). yfinance rows take precedence for overlapping years.
+        def _merge_by_year(scrn: list[dict], yfin: list[dict]) -> list[dict]:
+            merged: dict[int, dict] = {}
+            for row in scrn:
+                merged[row["period_year"]] = row
+            for row in yfin:
+                merged[row["period_year"]] = row   # yfinance wins
+            return list(merged.values())
+
+        all_income = _merge_by_year(
+            screener_financials.get("income_statements", []),
+            fetch_result.income_statements,
+        )
+        all_bs = _merge_by_year(
+            screener_financials.get("balance_sheets", []),
+            fetch_result.balance_sheets,
+        )
+        all_cf = _merge_by_year(
+            screener_financials.get("cash_flows", []),
+            fetch_result.cash_flows,
+        )
+
         ratios = compute_key_ratios(
             company_info=fetch_result.company,
-            income_statements=fetch_result.income_statements,
-            balance_sheets=fetch_result.balance_sheets,
-            cash_flows=fetch_result.cash_flows,
+            income_statements=all_income,
+            balance_sheets=all_bs,
+            cash_flows=all_cf,
         )
 
         if dry_run:
