@@ -15,6 +15,16 @@ interface CompanyHeaderProps {
 export function CompanyHeader({ symbol }: CompanyHeaderProps) {
   const router = useRouter();
   const { data: company, isLoading } = useCompany(symbol);
+
+  const handleBack = () => {
+    const saved = sessionStorage.getItem("company_back_url");
+    if (saved) {
+      sessionStorage.removeItem("company_back_url");
+      router.push(saved);
+    } else {
+      router.back();
+    }
+  };
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const queryClient = useQueryClient();
 
@@ -72,7 +82,7 @@ export function CompanyHeader({ symbol }: CompanyHeaderProps) {
       <div>
         {/* Back button */}
         <button
-          onClick={() => router.back()}
+          onClick={handleBack}
           className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-3 transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
