@@ -37,6 +37,7 @@ import asyncio
 import os
 import sys
 import time
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -170,6 +171,7 @@ async def upsert_company(
         "week52_low":            data.get("week52_low"),
         "employee_count":        data.get("employee_count"),
         "headquarters":          data.get("headquarters"),
+        "updated_at":            datetime.now(timezone.utc),  # always reflect last seed time
         **holding_data,
     }
 
@@ -276,6 +278,8 @@ async def seed_company(
         "bs":     0,
         "cf":     0,
         "ratios": 0,
+        "scrn_pl": 0,   # Screener.in income rows
+        "scrn_err": "",  # Screener.in error if any
         "status": "ok",
         "error":  "",
     }
@@ -326,6 +330,11 @@ async def seed_company(
             try:
                 screener_data = screener.fetch_holding_data(nse_symbol)
                 screener_financials = screener.fetch_financials(nse_symbol)
+                status["scrn_pl"] = len(screener_financials.get("income_statements", []))
+                if status["scrn_pl"] == 0:
+                    status["scrn_err"] = "no data"
+            except Exception as scrn_exc:
+                status["scrn_err"] = str(scrn_exc)[:40]
             finally:
                 screener.close()
 
@@ -525,14 +534,15 @@ async def run_seed(
             r["bs"],
             r["cf"],
             r["ratios"],
+            f"{r['scrn_pl']}{'?' if r['scrn_err'] else ''}",
             r["status"],
-            (r["error"][:40] if r["error"] else ""),
+            (r["error"][:40] if r["error"] else r.get("scrn_err", "")),
         ]
         for r in results
     ]
     print(tabulate(
         table,
-        headers=["Symbol", "Name", "P&L", "BS", "CF", "Ratios", "Status", "Error"],
+        headers=["Symbol", "Name", "P&L", "BS", "CF", "Ratios", "Scrn P&L", "Status", "Error"],
         tablefmt="rounded_outline",
     ))
 
