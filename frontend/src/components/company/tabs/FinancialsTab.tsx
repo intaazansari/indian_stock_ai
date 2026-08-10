@@ -42,7 +42,7 @@ function periodLabel(item: IncomeItem): string {
 }
 
 function useFinancials(symbol: string, period: PeriodType) {
-  const num = period === "quarterly" ? 12 : 5;
+  const num = period === "quarterly" ? 12 : 10;
   return useQuery<FinancialSummary>({
     queryKey: ["financials", symbol, period],
     queryFn: async () => {
