@@ -50,6 +50,12 @@ class Company(Base, TimestampMixin):
     cmp: Mapped[Decimal | None] = mapped_column(
         Numeric(12, 2), nullable=True, comment="Current Market Price"
     )
+    week52_high: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True, comment="52-week high price"
+    )
+    week52_low: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True, comment="52-week low price"
+    )
 
     # ── Ownership ─────────────────────────────────────────────────────────────
     promoter_holding_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)

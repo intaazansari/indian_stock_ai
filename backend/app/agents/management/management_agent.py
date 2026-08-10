@@ -14,6 +14,8 @@ from app.core.config import settings
 
 class ManagementState(TypedDict):
     company_id: str
+    company_data: dict[str, Any]
+    financial_context: dict[str, Any]
     management_context: dict[str, Any]
     result: dict[str, Any]
 
@@ -34,38 +36,64 @@ class ManagementAgent(BaseAgent):
     async def analyze(self, input_data: dict[str, Any]) -> dict[str, Any]:
         state = ManagementState(
             company_id=input_data["company_id"],
-            management_context=input_data.get("management_context", {}),
+            company_data=input_data.get("company_data", {}),
+            financial_context=input_data.get("financial_context", {}),
+            management_context={},
             result={},
         )
         final_state = await self._graph.ainvoke(state)
         return final_state["result"]
 
     async def _build_context(self, state: ManagementState) -> ManagementState:
-        # TODO: Fetch promoter data, salary data, capital allocation history from DB
+        cd  = state.get("company_data", {})
+        fc  = state.get("financial_context", {})
+
+        def _v(key: str, fallback: str = "N/A") -> Any:
+            val = cd.get(key) or fc.get(key)
+            return val if val not in (None, "", "N/A") else fallback
+
+        # Capex track record from cash flow context
+        capex   = fc.get("capex_cr", "N/A")
+        fcf     = fc.get("fcf_cr", "N/A")
+        cfo     = fc.get("cfo_cr", "N/A")
+        capex_text = (
+            f"Capex ₹{capex} Cr | FCF ₹{fcf} Cr | CFO ₹{cfo} Cr"
+            if capex != "N/A" else "N/A"
+        )
+
         state["management_context"] = {
-            "company_name": "Company Name",
-            "promoter_holding_pct": 68.5,
-            "promoter_pledging_pct": 0.0,
-            "promoter_holding_change_3yr": -1.2,
-            "md_salary_cr": 5.2,
-            "dividend_payout_avg_pct": 35.0,
-            "buyback_history": "None in last 5 years",
-            "capex_track_record": "Disciplined, returns-focused",
-            "audit_firm": "Big 4",
-            "related_party_transactions": "Low, well-disclosed",
+            "company_name":              _v("name"),
+            "sector":                    _v("sector"),
+            "promoter_holding_pct":      _v("promoter_holding"),
+            "fii_holding_pct":           cd.get("fii_holding_pct", "N/A"),
+            "dii_holding_pct":           cd.get("dii_holding_pct", "N/A"),
+            "promoter_pledging_pct":     "N/A (not collected)",
+            "promoter_holding_change_3yr": "N/A (not computed)",
+            "md_salary_cr":              "N/A (not collected)",
+            "dividend_payout_avg_pct":   fc.get("dividend_yield", "N/A"),
+            "capex_track_record":        capex_text,
+            "roce":                      _v("roce"),
+            "roe":                       _v("roe"),
+            "debt_equity":               _v("debt_equity"),
+            "cfo_pat_ratio":             fc.get("cfo_pat_ratio", "N/A"),
+            "revenue_cagr_3yr":          fc.get("revenue_cagr_3yr", "N/A"),
+            "pat_cagr_3yr":              fc.get("pat_cagr_3yr", "N/A"),
+            "audit_firm":                "N/A (not collected)",
+            "related_party_transactions":"N/A (not collected)",
         }
         return state
 
     async def _analyze(self, state: ManagementState) -> ManagementState:
         ctx = state["management_context"]
-        prompt = f"""Evaluate the management quality of {ctx['company_name']}:
+        prompt = f"""Evaluate the management quality of {ctx['company_name']} ({ctx.get('sector', '')}):
 
-Promoter Holding: {ctx['promoter_holding_pct']}% | Pledged: {ctx['promoter_pledging_pct']}% | Change (3Y): {ctx['promoter_holding_change_3yr']}%
-MD Salary: ₹{ctx['md_salary_cr']} Cr | Dividend Payout (avg): {ctx['dividend_payout_avg_pct']}%
-Buyback: {ctx['buyback_history']}
-CapEx Track Record: {ctx['capex_track_record']}
-Audit Firm: {ctx['audit_firm']}
-Related Party Transactions: {ctx['related_party_transactions']}
+Promoter Holding: {ctx['promoter_holding_pct']}% | FII: {ctx['fii_holding_pct']}% | DII: {ctx['dii_holding_pct']}%
+Promoter Pledged: {ctx['promoter_pledging_pct']} | 3-Year Change: {ctx['promoter_holding_change_3yr']}
+ROCE: {ctx['roce']}% | ROE: {ctx['roe']}% | D/E: {ctx['debt_equity']}
+CFO/PAT Ratio: {ctx['cfo_pat_ratio']} | Revenue CAGR (3yr): {ctx['revenue_cagr_3yr']}%
+CapEx & Cash Flow: {ctx['capex_track_record']}
+Dividend Yield: {ctx['dividend_payout_avg_pct']}%
+Audit Firm: {ctx['audit_firm']} | RPT: {ctx['related_party_transactions']}
 
 Return JSON:
 {{

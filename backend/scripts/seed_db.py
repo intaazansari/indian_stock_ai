@@ -166,6 +166,8 @@ async def upsert_company(
         "market_cap_cr":         data.get("market_cap_cr"),
         "cmp":                   data.get("cmp"),
         "face_value":            data.get("face_value"),
+        "week52_high":           data.get("week52_high"),
+        "week52_low":            data.get("week52_low"),
         "employee_count":        data.get("employee_count"),
         "headquarters":          data.get("headquarters"),
         **holding_data,

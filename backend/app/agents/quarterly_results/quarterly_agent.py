@@ -14,6 +14,8 @@ from app.core.config import settings
 
 class QuarterlyState(TypedDict):
     company_id: str
+    company_data: dict[str, Any]
+    financial_context: dict[str, Any]
     quarterly_context: dict[str, Any]
     result: dict[str, Any]
 
@@ -34,32 +36,75 @@ class QuarterlyResultsAgent(BaseAgent):
     async def analyze(self, input_data: dict[str, Any]) -> dict[str, Any]:
         state = QuarterlyState(
             company_id=input_data["company_id"],
-            quarterly_context=input_data.get("quarterly_context", {}),
+            company_data=input_data.get("company_data", {}),
+            financial_context=input_data.get("financial_context", {}),
+            quarterly_context={},
             result={},
         )
         final_state = await self._graph.ainvoke(state)
         return final_state["result"]
 
     async def _build_context(self, state: QuarterlyState) -> QuarterlyState:
-        # TODO: Fetch latest quarterly vs prior quarter and same quarter last year
-        state["quarterly_context"] = {
-            "company_name": "Company Name",
-            "latest_quarter": "Q2 FY25",
-            "revenue_qoq": 5.2, "revenue_yoy": 12.8,
-            "pat_qoq": 8.1, "pat_yoy": 18.5,
-            "ebitda_margin_current": 22.5, "ebitda_margin_prev_q": 21.0,
-            "management_commentary": "Demand environment remains robust...",
-        }
+        cd  = state.get("company_data", {})
+        fc  = state.get("financial_context", {})
+
+        quarters = fc.get("quarterly_results", [])
+        company_name = cd.get("name", fc.get("company_name", "Unknown"))
+
+        ctx: dict[str, Any] = {"company_name": company_name}
+
+        if len(quarters) >= 1:
+            q0 = quarters[0]
+            label0 = f"Q{q0.get('period_quarter','?')} FY{str(q0.get('period_year','?'))[-2:]}"
+            ctx["latest_quarter"]      = label0
+            ctx["revenue_cr"]          = q0.get("revenue_cr", "N/A")
+            ctx["pat_cr"]              = q0.get("pat_cr", "N/A")
+            ctx["ebitda_cr"]           = q0.get("ebitda_cr", "N/A")
+            ctx["ebitda_margin"]       = q0.get("ebitda_margin", "N/A")
+            ctx["eps_basic"]           = q0.get("eps_basic", "N/A")
+
+        # QoQ comparison (Q0 vs Q1)
+        def _pct_chg(cur, prev):
+            try:
+                c, p = float(cur), float(prev)
+                if p == 0:
+                    return "N/A"
+                return round((c - p) / abs(p) * 100, 1)
+            except (TypeError, ValueError):
+                return "N/A"
+
+        if len(quarters) >= 2:
+            q1 = quarters[1]
+            ctx["revenue_qoq"] = _pct_chg(ctx.get("revenue_cr"), q1.get("revenue_cr"))
+            ctx["pat_qoq"]     = _pct_chg(ctx.get("pat_cr"), q1.get("pat_cr"))
+            ctx["ebitda_margin_prev_q"] = q1.get("ebitda_margin", "N/A")
+        else:
+            ctx.setdefault("revenue_qoq", "N/A")
+            ctx.setdefault("pat_qoq",     "N/A")
+            ctx.setdefault("ebitda_margin_prev_q", "N/A")
+
+        # YoY comparison (Q0 vs same quarter last year)
+        if len(quarters) >= 5:
+            q4 = quarters[4]
+            ctx["revenue_yoy"] = _pct_chg(ctx.get("revenue_cr"), q4.get("revenue_cr"))
+            ctx["pat_yoy"]     = _pct_chg(ctx.get("pat_cr"),     q4.get("pat_cr"))
+        else:
+            ctx.setdefault("revenue_yoy", "N/A")
+            ctx.setdefault("pat_yoy",     "N/A")
+
+        ctx.setdefault("latest_quarter", "Latest Quarter")
+        ctx["management_commentary"] = "No recent commentary available."
+        state["quarterly_context"] = ctx
         return state
 
     async def _analyze(self, state: QuarterlyState) -> QuarterlyState:
         ctx = state["quarterly_context"]
-        prompt = f"""Analyse Q2 FY25 results for {ctx['company_name']}:
+        prompt = f"""Analyse {ctx.get('latest_quarter', 'the latest quarter')} results for {ctx['company_name']}:
 
-Revenue Growth: {ctx['revenue_qoq']}% QoQ | {ctx['revenue_yoy']}% YoY
-PAT Growth: {ctx['pat_qoq']}% QoQ | {ctx['pat_yoy']}% YoY
-EBITDA Margin: {ctx['ebitda_margin_current']}% (prev Q: {ctx['ebitda_margin_prev_q']}%)
-Management Commentary: {ctx['management_commentary']}
+Revenue: ₹{ctx.get('revenue_cr', 'N/A')} Cr | Growth: {ctx.get('revenue_qoq', 'N/A')}% QoQ | {ctx.get('revenue_yoy', 'N/A')}% YoY
+PAT: ₹{ctx.get('pat_cr', 'N/A')} Cr | Growth: {ctx.get('pat_qoq', 'N/A')}% QoQ | {ctx.get('pat_yoy', 'N/A')}% YoY
+EBITDA Margin: {ctx.get('ebitda_margin', 'N/A')}% (prev Q: {ctx.get('ebitda_margin_prev_q', 'N/A')}%)
+EPS (Basic): ₹{ctx.get('eps_basic', 'N/A')}
 
 Return JSON:
 {{

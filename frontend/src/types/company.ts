@@ -9,6 +9,8 @@ export interface Company {
   market_cap_cr: number | null;
   face_value: number | null;
   cmp: number | null;
+  week52_high: number | null;
+  week52_low: number | null;
   promoter_holding_pct: number | null;
   fii_holding_pct: number | null;
   dii_holding_pct: number | null;

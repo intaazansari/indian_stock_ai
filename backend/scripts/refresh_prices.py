@@ -47,6 +47,7 @@ from tqdm import tqdm
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.models.company import Company
+from app.models.financials import IncomeStatement, KeyRatio
 
 setup_logging()
 logger = structlog.get_logger(__name__)
@@ -54,8 +55,8 @@ logger = structlog.get_logger(__name__)
 
 def _fetch_price(nse_symbol: str) -> dict[str, Any]:
     """
-    Fetch current price and market cap for one NSE symbol via yfinance.
-    Returns a dict with keys: cmp, market_cap_cr, error.
+    Fetch current price, market cap, and 52W high/low for one NSE symbol via yfinance.
+    Returns a dict with keys: cmp, market_cap_cr, week52_high, week52_low, error.
     """
     ticker_symbol = f"{nse_symbol}.NS"
     try:
@@ -64,19 +65,23 @@ def _fetch_price(nse_symbol: str) -> dict[str, Any]:
 
         price = getattr(info, "last_price", None)
         mkt_cap = getattr(info, "market_cap", None)
+        year_high = getattr(info, "year_high", None)
+        year_low  = getattr(info, "year_low", None)
 
         if price is None or price <= 0:
-            return {"cmp": None, "market_cap_cr": None, "error": "no price data"}
+            return {"cmp": None, "market_cap_cr": None, "week52_high": None, "week52_low": None, "error": "no price data"}
 
         mkt_cap_cr = round(mkt_cap / 1e7, 2) if mkt_cap else None  # ₹ → ₹ Crore
 
         return {
             "cmp": round(float(price), 2),
             "market_cap_cr": mkt_cap_cr,
+            "week52_high": round(float(year_high), 2) if year_high else None,
+            "week52_low":  round(float(year_low), 2)  if year_low  else None,
             "error": None,
         }
     except Exception as exc:
-        return {"cmp": None, "market_cap_cr": None, "error": str(exc)[:80]}
+        return {"cmp": None, "market_cap_cr": None, "week52_high": None, "week52_low": None, "error": str(exc)[:80]}
 
 
 async def refresh_prices(
@@ -89,7 +94,7 @@ async def refresh_prices(
 
     # ── Load companies to refresh ─────────────────────────────────────────────
     async with session_factory() as session:
-        stmt = select(Company.nse_symbol, Company.name, Company.cmp, Company.market_cap_cr)
+        stmt = select(Company.id, Company.nse_symbol, Company.name, Company.cmp, Company.market_cap_cr)
         if symbols:
             stmt = stmt.where(Company.nse_symbol.in_([s.upper() for s in symbols]))
         else:
@@ -110,6 +115,7 @@ async def refresh_prices(
     with tqdm(companies, unit="co", colour="cyan") as pbar:
         for row in pbar:
             symbol = row.nse_symbol
+            company_id = row.id
             pbar.set_description(f"{symbol:<12}")
 
             fetched = _fetch_price(symbol)
@@ -133,13 +139,54 @@ async def refresh_prices(
                         update_vals["cmp"] = Decimal(str(fetched["cmp"]))
                     if fetched["market_cap_cr"] is not None:
                         update_vals["market_cap_cr"] = Decimal(str(fetched["market_cap_cr"]))
+                    if fetched["week52_high"] is not None:
+                        update_vals["week52_high"] = Decimal(str(fetched["week52_high"]))
+                    if fetched["week52_low"] is not None:
+                        update_vals["week52_low"] = Decimal(str(fetched["week52_low"]))
                     if update_vals:
                         await session.execute(
                             update(Company)
                             .where(Company.nse_symbol == symbol)
                             .values(**update_vals)
                         )
-                        await session.commit()
+
+                    # ── Update live P/E in key_ratios ─────────────────────────
+                    try:
+                        from sqlalchemy import desc as sa_desc, func as sa_func
+                        eps_scalar = (await session.execute(
+                            select(IncomeStatement.eps_basic)
+                            .where(
+                                IncomeStatement.company_id == company_id,
+                                IncomeStatement.period_type == "annual",
+                                IncomeStatement.eps_basic.isnot(None),
+                            )
+                            .order_by(sa_desc(IncomeStatement.period_year))
+                            .limit(1)
+                        )).scalar_one_or_none()
+
+                        if eps_scalar and float(eps_scalar) > 0:
+                            live_pe = round(fetched["cmp"] / float(eps_scalar), 2)
+                            latest_yr = (await session.execute(
+                                select(sa_func.max(KeyRatio.period_year))
+                                .where(
+                                    KeyRatio.company_id == company_id,
+                                    KeyRatio.period_type == "annual",
+                                )
+                            )).scalar_one_or_none()
+                            if latest_yr:
+                                await session.execute(
+                                    update(KeyRatio)
+                                    .where(
+                                        KeyRatio.company_id == company_id,
+                                        KeyRatio.period_type == "annual",
+                                        KeyRatio.period_year == latest_yr,
+                                    )
+                                    .values(pe_ratio=Decimal(str(live_pe)))
+                                )
+                    except Exception as pe_exc:
+                        logger.warning("refresh.pe_update.failed", symbol=symbol, error=str(pe_exc))
+
+                    await session.commit()
 
     await engine.dispose()
 

@@ -117,6 +117,8 @@ class AnalysisService:
                 "market_cap_cr": str(company_row.market_cap_cr or ""),
                 "cmp": str(company_row.cmp or ""),
                 "promoter_holding_pct": str(company_row.promoter_holding_pct or ""),
+                "fii_holding_pct": str(company_row.fii_holding_pct or ""),
+                "dii_holding_pct": str(company_row.dii_holding_pct or ""),
                 "nse_symbol": company_row.nse_symbol or "",
             }
 
@@ -194,12 +196,12 @@ class AnalysisService:
             .limit(1)
         )).scalar_one_or_none()
 
-        # ── Last 3 Income Statements for revenue/PAT trend ────────────────────
+        # ── Last 6 Income Statements for revenue/PAT trend + CAGR ─────────────
         pl_rows = (await self.session.execute(
             sa_select(IncomeStatement)
             .where(IncomeStatement.company_id == company_id, IncomeStatement.period_type == "annual")
             .order_by(desc(IncomeStatement.period_year))
-            .limit(3)
+            .limit(6)
         )).scalars().all()
 
         latest_pl = pl_rows[0] if pl_rows else None
@@ -226,6 +228,54 @@ class AnalysisService:
         cfo_pat = "N/A"
         if cf and cf.cfo_cr and latest_pl and latest_pl.pat_cr and float(latest_pl.pat_cr) != 0:
             cfo_pat = str(round(float(cf.cfo_cr) / float(latest_pl.pat_cr), 2))
+
+        # ── 3-year and 5-year CAGR for Revenue and PAT ───────────────────────
+        def _cagr(latest_val, base_val, years: int) -> str:
+            try:
+                l, b = float(latest_val), float(base_val)
+                if b <= 0 or l <= 0:
+                    return "N/A"
+                return str(round((pow(l / b, 1 / years) - 1) * 100, 1))
+            except (TypeError, ValueError, ZeroDivisionError):
+                return "N/A"
+
+        latest_rev = getattr(latest_pl, "revenue_cr", None) if latest_pl else None
+        latest_pat = getattr(latest_pl, "pat_cr", None) if latest_pl else None
+        rev_3y = getattr(pl_rows[3], "revenue_cr", None) if len(pl_rows) > 3 else None
+        pat_3y = getattr(pl_rows[3], "pat_cr",     None) if len(pl_rows) > 3 else None
+        rev_5y = getattr(pl_rows[5], "revenue_cr", None) if len(pl_rows) > 5 else None
+        pat_5y = getattr(pl_rows[5], "pat_cr",     None) if len(pl_rows) > 5 else None
+
+        revenue_cagr_3yr = _cagr(latest_rev, rev_3y, 3)
+        pat_cagr_3yr     = _cagr(latest_pat, pat_3y, 3)
+        revenue_cagr_5yr = _cagr(latest_rev, rev_5y, 5)
+        pat_cagr_5yr     = _cagr(latest_pat, pat_5y, 5)
+
+        # ── Quarterly Income Statements (last 8 quarters) ─────────────────────
+        quarterly_rows = (await self.session.execute(
+            sa_select(IncomeStatement)
+            .where(
+                IncomeStatement.company_id == company_id,
+                IncomeStatement.period_type == "quarterly",
+            )
+            .order_by(desc(IncomeStatement.period_year), desc(IncomeStatement.period_quarter))
+            .limit(8)
+        )).scalars().all()
+
+        quarterly_results = []
+        for row in quarterly_rows:
+            rev = float(row.revenue_cr) if row.revenue_cr else None
+            ebitda = float(row.ebitda_cr) if row.ebitda_cr else None
+            ebitda_margin = round(ebitda / rev * 100, 1) if rev and ebitda else None
+            quarterly_results.append({
+                "period_year":     row.period_year,
+                "period_quarter":  row.period_quarter,
+                "revenue_cr":      _f(row.revenue_cr),
+                "pat_cr":          _f(row.pat_cr),
+                "ebitda_cr":       _f(row.ebitda_cr),
+                "ebitda_margin":   str(ebitda_margin) if ebitda_margin else "N/A",
+                "eps_basic":       _f(row.eps_basic),
+            })
 
         # ── Historical Median P/E (from this company's own annual ratios) ─────────
         hist_pe_list = [
@@ -325,6 +375,15 @@ class AnalysisService:
             # Forensics
             "receivables_change": rec_change,
             "promoter_pledged": "N/A",  # Not in current DB schema — placeholder
+            # CAGR
+            "revenue_cagr_3yr":  revenue_cagr_3yr,
+            "pat_cagr_3yr":      pat_cagr_3yr,
+            "revenue_cagr_5yr":  revenue_cagr_5yr,
+            "pat_cagr_5yr":      pat_cagr_5yr,
+            # Quarterly results list (for quarterly agent)
+            "quarterly_results":  quarterly_results,
+            # Capex (latest annual)
+            "capex_cr":          _f(getattr(cf, "capex_cr", None)) if cf else "N/A",
             # Sector / Historical PE (numeric, not strings)
             "sector_median_pe_val":    sector_median_pe_val,
             "historical_pe_median_val": historical_pe_median_val,

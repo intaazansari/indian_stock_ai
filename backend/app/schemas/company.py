@@ -35,6 +35,8 @@ class CompanyDetail(CompanyBrief):
     dii_holding_pct: Decimal | None
     public_holding_pct: Decimal | None
     face_value: Decimal | None
+    week52_high: Decimal | None = None
+    week52_low: Decimal | None = None
 
     model_config = {"from_attributes": True}
 

@@ -91,6 +91,12 @@ export function CompanyHeader({ symbol }: CompanyHeaderProps) {
           {company.face_value && (
             <MetricPill label="Face Value" value={`₹${company.face_value}`} />
           )}
+          {company.week52_high && (
+            <MetricPill label="52W High" value={`₹${parseFloat(String(company.week52_high)).toFixed(0)}`} />
+          )}
+          {company.week52_low && (
+            <MetricPill label="52W Low" value={`₹${parseFloat(String(company.week52_low)).toFixed(0)}`} />
+          )}
         </div>
       </div>
 

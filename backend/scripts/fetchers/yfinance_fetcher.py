@@ -250,6 +250,8 @@ class YFinanceFetcher:
             "employee_count": info.get("fullTimeEmployees"),
             "founded_year": None,
             "headquarters": info.get("city"),
+            "week52_high": _to_dec(info.get("fiftyTwoWeekHigh")),
+            "week52_low":  _to_dec(info.get("fiftyTwoWeekLow")),
         }
 
     def _fetch_income_statements(
