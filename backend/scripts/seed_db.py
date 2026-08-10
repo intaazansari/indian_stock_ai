@@ -55,7 +55,7 @@ if not _env_path.exists():
 load_dotenv(_env_path)
 
 import structlog
-from sqlalchemy import select, text
+from sqlalchemy import func as sa_func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from tabulate import tabulate
@@ -189,6 +189,13 @@ async def upsert_company(
     return result.scalar_one()
 
 
+# Constraint key columns — never included in ON CONFLICT SET
+_INCOME_KEYS  = {"period_type", "period_year", "period_quarter"}
+_BS_KEYS      = {"period_type", "period_year", "period_quarter"}
+_CF_KEYS      = {"period_type", "period_year", "period_quarter"}
+_RATIO_KEYS   = {"period_type", "period_year"}
+
+
 async def upsert_income_statements(
     session: AsyncSession, company_id, rows: list[dict]
 ) -> int:
@@ -199,7 +206,8 @@ async def upsert_income_statements(
         stmt = pg_insert(IncomeStatement).values(company_id=company_id, **row)
         stmt = stmt.on_conflict_do_update(
             constraint="uq_income_period",
-            set_={k: stmt.excluded[k] for k in row},
+            set_={k: sa_func.coalesce(stmt.excluded[k], IncomeStatement.__table__.c[k])
+                  for k in row if k not in _INCOME_KEYS},
         )
         await session.execute(stmt)
         count += 1
@@ -216,7 +224,8 @@ async def upsert_balance_sheets(
         stmt = pg_insert(BalanceSheet).values(company_id=company_id, **row)
         stmt = stmt.on_conflict_do_update(
             constraint="uq_balance_period",
-            set_={k: stmt.excluded[k] for k in row},
+            set_={k: sa_func.coalesce(stmt.excluded[k], BalanceSheet.__table__.c[k])
+                  for k in row if k not in _BS_KEYS},
         )
         await session.execute(stmt)
         count += 1
@@ -233,7 +242,8 @@ async def upsert_cash_flows(
         stmt = pg_insert(CashFlow).values(company_id=company_id, **row)
         stmt = stmt.on_conflict_do_update(
             constraint="uq_cashflow_period",
-            set_={k: stmt.excluded[k] for k in row},
+            set_={k: sa_func.coalesce(stmt.excluded[k], CashFlow.__table__.c[k])
+                  for k in row if k not in _CF_KEYS},
         )
         await session.execute(stmt)
         count += 1
@@ -248,7 +258,7 @@ async def upsert_key_ratios(
         stmt = pg_insert(KeyRatio).values(company_id=company_id, **row)
         stmt = stmt.on_conflict_do_update(
             constraint="uq_ratio_period",
-            set_={k: stmt.excluded[k] for k in row},
+            set_={k: stmt.excluded[k] for k in row if k not in _RATIO_KEYS},
         )
         await session.execute(stmt)
         count += 1
