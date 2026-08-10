@@ -669,6 +669,13 @@ def compute_key_ratios(
         ebitda      = f(pl, "ebitda_cr")
         ebit        = f(pl, "ebit_cr")
         equity      = f(bs, "shareholders_equity_cr")
+        # Fall back to share_capital + reserves when equity not directly stored
+        # (Screener.in older years may only have reserves_surplus_cr)
+        if equity is None:
+            sc  = f(bs, "share_capital_cr") or 0
+            res = f(bs, "reserves_surplus_cr")
+            if res is not None:
+                equity = sc + res
         total_assets = f(bs, "total_assets_cr")
         total_debt  = (f(bs, "long_term_debt_cr") or 0) + (f(bs, "short_term_debt_cr") or 0)
         cur_assets  = f(bs, "current_assets_cr")

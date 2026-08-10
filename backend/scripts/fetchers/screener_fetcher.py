@@ -317,7 +317,8 @@ class ScreenerFetcher:
                 row = rows.get(label, [])
                 return self._parse_num(row[i]) if i < len(row) else None
 
-            equity    = v("Share Capital") or v("Equity Share Capital")
+            equity    = (v("Share Capital") or v("Equity Share Capital")
+                         or v("Paid Up Capital") or v("Equity Capital"))
             reserves  = v("Reserves") or v("Reserves & Surplus")
             borrowings= v("Borrowings") or v("Total Borrowings")
             t_assets  = v("Total Assets") or v("Total Assets ")
@@ -325,9 +326,14 @@ class ScreenerFetcher:
             invest    = v("Investments")
             cur_assets= v("Current Assets") or v("Total Current Assets")
 
-            shareholders_equity = None
+            # Compute shareholders_equity; fall back to reserves alone if
+            # share capital label is missing (common in consolidated sheets)
             if equity is not None and reserves is not None:
                 shareholders_equity = equity + reserves
+            elif reserves is not None:
+                shareholders_equity = (equity or Decimal("0")) + reserves
+            else:
+                shareholders_equity = equity
 
             if t_assets is None and shareholders_equity is None:
                 continue
