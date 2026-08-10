@@ -61,6 +61,26 @@ export function formatMultiple(value: string | number | null | undefined, decima
   return `${n.toFixed(decimals)}x`;
 }
 
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30
+
+/**
+ * Returns current NSE market status.
+ * NSE trades Mon–Fri 9:15–15:30 IST.
+ */
+export function getNseMarketStatus(): { isOpen: boolean; label: string } {
+  const nowIST = new Date(Date.now() + IST_OFFSET_MS);
+  const day = nowIST.getUTCDay(); // 0=Sun … 6=Sat
+  const totalMins = nowIST.getUTCHours() * 60 + nowIST.getUTCMinutes();
+  const isOpen =
+    day >= 1 && day <= 5 &&
+    totalMins >= 9 * 60 + 15 &&
+    totalMins <= 15 * 60 + 30;
+  return {
+    isOpen,
+    label: isOpen ? "Live · refreshes every 60s" : "Market closed",
+  };
+}
+
 /**
  * Returns 'positive' | 'negative' | 'neutral' class name based on value sign.
  */

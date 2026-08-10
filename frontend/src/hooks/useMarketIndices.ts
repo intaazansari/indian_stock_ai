@@ -2,12 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { marketApi } from "@/lib/api/market";
+import { getNseMarketStatus } from "@/lib/utils";
 
 export function useMarketIndices() {
   return useQuery({
     queryKey: ["market", "indices"],
     queryFn: marketApi.getIndices,
-    refetchInterval: 60_000, // refresh every 60s
+    // Only poll during NSE trading hours; stop when market is closed
+    refetchInterval: () => getNseMarketStatus().isOpen ? 60_000 : false,
     staleTime: 30_000,
   });
 }

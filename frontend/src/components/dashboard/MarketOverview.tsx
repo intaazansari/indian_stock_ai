@@ -1,8 +1,8 @@
 "use client";
 
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Wifi, WifiOff } from "lucide-react";
 import { useMarketIndices } from "@/hooks/useMarketIndices";
-import { cn } from "@/lib/utils";
+import { cn, getNseMarketStatus } from "@/lib/utils";
 
 function fmt(n: number | null, decimals = 2) {
   if (n === null || n === undefined) return "—";
@@ -59,6 +59,7 @@ function SkeletonCard() {
 
 export function MarketOverview() {
   const { data, isLoading } = useMarketIndices();
+  const market = getNseMarketStatus();
 
   return (
     <section>
@@ -66,7 +67,18 @@ export function MarketOverview() {
         <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           Market Overview
         </h2>
-        <span className="text-xs text-gray-400 dark:text-gray-500">Live · refreshes every 60s</span>
+        <span className={cn(
+          "flex items-center gap-1 text-xs font-medium",
+          market.isOpen
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-gray-400 dark:text-gray-500"
+        )}>
+          {market.isOpen
+            ? <Wifi className="w-3 h-3" />
+            : <WifiOff className="w-3 h-3" />
+          }
+          {market.label}
+        </span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
