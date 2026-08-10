@@ -126,8 +126,9 @@ export function FinancialsTab({ symbol }: { symbol: string }) {
         <>
           {/* P&L */}
           <div className="rounded-xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-900">
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-900 flex items-center gap-2">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Profit & Loss</h2>
+              <span className="text-xs font-mono font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950 px-1.5 py-0.5 rounded">{symbol}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -152,8 +153,9 @@ export function FinancialsTab({ symbol }: { symbol: string }) {
           {/* Key Ratios — annual only */}
           {period === "annual" && (
             <div className="rounded-xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-900">
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-900 flex items-center gap-2">
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Key Ratios</h2>
+                <span className="text-xs font-mono font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950 px-1.5 py-0.5 rounded">{symbol}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

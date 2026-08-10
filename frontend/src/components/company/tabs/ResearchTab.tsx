@@ -2,7 +2,7 @@
 
 import { Sparkles, RefreshCw, TrendingUp, Shield, Users, Zap, Globe } from "lucide-react";
 import { useAIAnalysis, useStreamAnalysis } from "@/hooks/useAIAnalysis";
-import { cn } from "@/lib/utils";
+import { cn, formatUpdatedAt } from "@/lib/utils";
 
 interface ResearchData {
   one_liner?: string;
@@ -13,6 +13,7 @@ interface ResearchData {
   growth_drivers?: string[];
   sector_tailwinds?: string;
   raw_response?: string;
+  generated_at?: string;
 }
 
 interface Props {
@@ -64,9 +65,13 @@ export function ResearchTab({ symbol }: Props) {
     <div className="rounded-xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 overflow-hidden">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-900 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Sparkles className="w-4 h-4 text-brand-500" />
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Business Research</h2>
+          <span className="text-xs font-mono font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950 px-1.5 py-0.5 rounded">{symbol}</span>
+          {data?.generated_at && (
+            <span className="text-xs text-gray-400">· Updated {formatUpdatedAt(data.generated_at)}</span>
+          )}
         </div>
         <button
           onClick={startStream}

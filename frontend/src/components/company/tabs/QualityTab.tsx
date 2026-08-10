@@ -2,7 +2,7 @@
 
 import { RefreshCw, Sparkles } from "lucide-react";
 import { useAIAnalysis, useStreamAnalysis } from "@/hooks/useAIAnalysis";
-import { cn, getScoreColor, getScoreBg } from "@/lib/utils";
+import { cn, getScoreColor, getScoreBg, formatUpdatedAt } from "@/lib/utils";
 import type { QualityScoreResponse, ScoreItem } from "@/types/analysis";
 
 function ScoreBar({ item }: { item: ScoreItem }) {
@@ -31,9 +31,13 @@ export function QualityTab({ symbol }: { symbol: string }) {
 
   const header = (
     <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-900 flex items-center justify-between">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Sparkles className="w-4 h-4 text-brand-500" />
         <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Business Quality</h2>
+        <span className="text-xs font-mono font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950 px-1.5 py-0.5 rounded">{symbol}</span>
+        {data?.generated_at && (
+          <span className="text-xs text-gray-400">· Updated {formatUpdatedAt(data.generated_at)}</span>
+        )}
       </div>
       {data && (
         <button onClick={startStream} disabled={isStreaming} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50">
