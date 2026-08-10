@@ -316,12 +316,14 @@ async def seed_company(
             status["error"] = "; ".join(fetch_result.errors) or "No data returned"
             return status
 
-        # ── 2. Fetch shareholding from Screener.in ─────────────────────────
+        # ── 2. Fetch shareholding + historical financials from Screener.in ──
         screener_data: dict[str, Any] = {}
+        screener_financials: dict[str, Any] = {"income_statements": [], "balance_sheets": [], "cash_flows": []}
         if use_screener:
             screener = ScreenerFetcher()
             try:
                 screener_data = screener.fetch_holding_data(nse_symbol)
+                screener_financials = screener.fetch_financials(nse_symbol)
             finally:
                 screener.close()
 
@@ -346,6 +348,15 @@ async def seed_company(
             session, fetch_result.company, bse_code, screener_data
         )
         cid = company.id
+
+        # Upsert Screener.in historical data first (older years, fewer fields).
+        # yfinance upsert below will overwrite recent years with richer data.
+        if screener_financials["income_statements"]:
+            await upsert_income_statements(session, cid, screener_financials["income_statements"])
+        if screener_financials["balance_sheets"]:
+            await upsert_balance_sheets(session, cid, screener_financials["balance_sheets"])
+        if screener_financials["cash_flows"]:
+            await upsert_cash_flows(session, cid, screener_financials["cash_flows"])
 
         status["income"] = await upsert_income_statements(
             session, cid, fetch_result.income_statements

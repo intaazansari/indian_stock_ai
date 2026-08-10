@@ -27,8 +27,9 @@ Terms:
 """
 from __future__ import annotations
 
+import re
 import time
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import requests
@@ -184,6 +185,248 @@ class ScreenerFetcher:
 
         except Exception as exc:
             logger.warning("screener.shareholding.parse_error", error=str(exc))
+
+        return result
+
+    # ── Financial statement scraping ──────────────────────────────────────────
+
+    @staticmethod
+    def _parse_screener_period(header: str) -> int | None:
+        """
+        Convert a Screener.in column header to an Indian fiscal year integer.
+
+        "Mar 2024" → 2024  (FY ending March 2024)
+        "Mar 2023" → 2023
+        Returns None for "TTM" or unparseable headers.
+        """
+        header = header.strip()
+        if header.upper() in ("TTM", ""):
+            return None
+        m = re.match(r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})", header)
+        if not m:
+            return None
+        return int(m.group(2))
+
+    @staticmethod
+    def _parse_num(text: str) -> Decimal | None:
+        """Parse Screener.in numeric cell: "1,23,456.78" | "-" | "" → Decimal | None."""
+        text = text.strip().replace(",", "")
+        if not text or text in ("-", "--", "NA", "N/A", "0"):
+            return None
+        try:
+            return Decimal(text)
+        except (InvalidOperation, ValueError):
+            return None
+
+    def _extract_section_rows(
+        self, soup: BeautifulSoup, section_id: str
+    ) -> tuple[list[str], dict[str, list[str]]]:
+        """
+        Parse a Screener.in financial table section.
+
+        Returns:
+            (period_headers, {row_label: [cell_text, ...]})
+        """
+        section = soup.find("section", {"id": section_id})
+        if not section:
+            return [], {}
+
+        table = section.find("table", class_="data-table") or section.find("table")
+        if not table:
+            return [], {}
+
+        thead = table.find("thead")
+        tbody = table.find("tbody")
+        if not thead or not tbody:
+            return [], {}
+
+        # Column headers (skip the first empty th)
+        headers: list[str] = [
+            th.get_text(strip=True)
+            for th in thead.find_all("th")[1:]
+        ]
+
+        # Row data
+        rows: dict[str, list[str]] = {}
+        for tr in tbody.find_all("tr"):
+            cells = tr.find_all("td")
+            if len(cells) < 2:
+                continue
+            # Strip trailing " +" tooltip markers from labels
+            label = re.sub(r"\s*\+\s*$", "", cells[0].get_text(strip=True)).strip()
+            values = [
+                cells[i].get_text(strip=True) if i < len(cells) else ""
+                for i in range(1, len(headers) + 1)
+            ]
+            rows[label] = values
+
+        return headers, rows
+
+    def _rows_to_annual_pl(
+        self, headers: list[str], rows: dict[str, list[str]]
+    ) -> list[dict[str, Any]]:
+        """Convert parsed Screener P&L table rows → income_statement dicts."""
+        results = []
+        for i, header in enumerate(headers):
+            fy = self._parse_screener_period(header)
+            if fy is None:
+                continue
+
+            def v(label: str) -> Decimal | None:
+                row = rows.get(label, [])
+                return self._parse_num(row[i]) if i < len(row) else None
+
+            revenue = v("Sales") or v("Revenue from Operations") or v("Net Sales")
+            ebitda  = v("Operating Profit")
+            other   = v("Other Income")
+            dep     = v("Depreciation")
+            interest= v("Interest") or v("Finance Cost")
+            pbt     = v("Profit before tax") or v("PBT")
+            pat     = v("Net Profit") or v("PAT")
+            eps     = v("EPS in Rs") or v("EPS (Rs)") or v("Basic EPS (Rs)")
+
+            if revenue is None and pat is None:
+                continue  # skip empty columns
+
+            results.append({
+                "period_type":    "annual",
+                "period_year":    fy,
+                "period_quarter": None,
+                "revenue_cr":     revenue,
+                "ebitda_cr":      ebitda,
+                "other_income_cr":other,
+                "depreciation_cr":dep,
+                "interest_cr":    interest,
+                "pbt_cr":         pbt,
+                "pat_cr":         pat,
+                "eps_basic":      eps,
+            })
+        return results
+
+    def _rows_to_annual_bs(
+        self, headers: list[str], rows: dict[str, list[str]]
+    ) -> list[dict[str, Any]]:
+        """Convert parsed Screener Balance Sheet rows → balance_sheet dicts."""
+        results = []
+        for i, header in enumerate(headers):
+            fy = self._parse_screener_period(header)
+            if fy is None:
+                continue
+
+            def v(label: str) -> Decimal | None:
+                row = rows.get(label, [])
+                return self._parse_num(row[i]) if i < len(row) else None
+
+            equity    = v("Share Capital") or v("Equity Share Capital")
+            reserves  = v("Reserves") or v("Reserves & Surplus")
+            borrowings= v("Borrowings") or v("Total Borrowings")
+            t_assets  = v("Total Assets") or v("Total Assets ")
+            fixed     = v("Fixed Assets") or v("Net Block")
+            invest    = v("Investments")
+            cur_assets= v("Current Assets") or v("Total Current Assets")
+
+            shareholders_equity = None
+            if equity is not None and reserves is not None:
+                shareholders_equity = equity + reserves
+
+            if t_assets is None and shareholders_equity is None:
+                continue
+
+            results.append({
+                "period_type":           "annual",
+                "period_year":           fy,
+                "period_quarter":        None,
+                "total_assets_cr":       t_assets,
+                "fixed_assets_cr":       fixed,
+                "current_assets_cr":     cur_assets,
+                "investments_cr":        invest,
+                "long_term_debt_cr":     borrowings,
+                "shareholders_equity_cr":shareholders_equity,
+                "share_capital_cr":      equity,
+                "reserves_surplus_cr":   reserves,
+            })
+        return results
+
+    def _rows_to_annual_cf(
+        self, headers: list[str], rows: dict[str, list[str]]
+    ) -> list[dict[str, Any]]:
+        """Convert parsed Screener Cash Flow rows → cash_flow dicts."""
+        results = []
+        for i, header in enumerate(headers):
+            fy = self._parse_screener_period(header)
+            if fy is None:
+                continue
+
+            def v(label: str) -> Decimal | None:
+                row = rows.get(label, [])
+                return self._parse_num(row[i]) if i < len(row) else None
+
+            cfo = v("Cash from Operating Activity") or v("Operating Cash Flow")
+            cfi = v("Cash from Investing Activity") or v("Investing Cash Flow")
+            cff = v("Cash from Financing Activity") or v("Financing Cash Flow")
+            net = v("Net Cash Flow")
+
+            if cfo is None:
+                continue
+
+            results.append({
+                "period_type":        "annual",
+                "period_year":        fy,
+                "period_quarter":     None,
+                "cfo_cr":             cfo,
+                "cfi_cr":             cfi,
+                "cff_cr":             cff,
+                "net_change_in_cash_cr": net,
+            })
+        return results
+
+    def fetch_financials(self, nse_symbol: str) -> dict[str, Any]:
+        """
+        Scrape 10+ years of annual financial statements from Screener.in.
+
+        Returns dict with keys: income_statements, balance_sheets, cash_flows
+        (each a list of dicts in the same format as YFinanceFetcher).
+        """
+        result: dict[str, Any] = {
+            "income_statements": [],
+            "balance_sheets":    [],
+            "cash_flows":        [],
+        }
+
+        for path in [f"/company/{nse_symbol}/consolidated/", f"/company/{nse_symbol}/"]:
+            url = SCREENER_BASE + path
+            try:
+                resp = self._session.get(url, timeout=TIMEOUT)
+                time.sleep(self.delay)
+                if resp.status_code == 200:
+                    break
+            except Exception as exc:
+                logger.warning("screener.financials.request_error", symbol=nse_symbol, error=str(exc))
+                return result
+        else:
+            logger.warning("screener.financials.not_found", symbol=nse_symbol)
+            return result
+
+        try:
+            soup = BeautifulSoup(resp.text, "html.parser")
+
+            pl_headers, pl_rows = self._extract_section_rows(soup, "profit-loss")
+            bs_headers, bs_rows = self._extract_section_rows(soup, "balance-sheet")
+            cf_headers, cf_rows = self._extract_section_rows(soup, "cash-flow")
+
+            result["income_statements"] = self._rows_to_annual_pl(pl_headers, pl_rows)
+            result["balance_sheets"]    = self._rows_to_annual_bs(bs_headers, bs_rows)
+            result["cash_flows"]        = self._rows_to_annual_cf(cf_headers, cf_rows)
+
+            logger.info(
+                "screener.financials.success",
+                symbol=nse_symbol,
+                income=len(result["income_statements"]),
+                bs=len(result["balance_sheets"]),
+                cf=len(result["cash_flows"]),
+            )
+        except Exception as exc:
+            logger.warning("screener.financials.parse_error", symbol=nse_symbol, error=str(exc))
 
         return result
 
