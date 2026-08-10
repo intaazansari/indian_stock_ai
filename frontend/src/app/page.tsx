@@ -2,14 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BarChart3, Brain, Shield, TrendingUp, Zap } from "lucide-react";
 import { SearchBar } from "@/components/layout/SearchBar";
-import { AuthRedirect } from "@/components/layout/AuthRedirect";
+import { LandingNavActions } from "@/components/layout/AuthRedirect";
 
 export const metadata: Metadata = { title: "Home" };
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      <AuthRedirect />
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
       <nav className="border-b border-gray-100 dark:border-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -20,18 +19,7 @@ export default function LandingPage() {
             <span className="font-semibold text-gray-900 dark:text-white">ValuePilotage</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link
-              href="/login"
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="text-sm bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
-            >
-              Get started
-            </Link>
+            <LandingNavActions />
           </div>
         </div>
       </nav>
