@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BarChart3, Brain, Shield, TrendingUp, Zap } from "lucide-react";
 import { SearchBar } from "@/components/layout/SearchBar";
+
+export const metadata: Metadata = { title: "Home" };
 
 export default function LandingPage() {
   return (
