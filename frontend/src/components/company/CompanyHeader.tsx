@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain, BookmarkPlus, BookmarkCheck, ExternalLink, Loader2 } from "lucide-react";
+import { Brain, BookmarkPlus, BookmarkCheck, ExternalLink, Loader2, Wifi, WifiOff } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -61,6 +61,9 @@ export function CompanyHeader({ symbol }: CompanyHeaderProps) {
 
   if (!company) return null;
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const syncLabel = getCmpSyncLabel(company.updated_at ?? null);
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
       {/* Left: Company Identity */}
@@ -84,7 +87,7 @@ export function CompanyHeader({ symbol }: CompanyHeaderProps) {
         </p>
 
         {/* Key metrics row */}
-        <div className="flex flex-wrap gap-4 mt-3">
+        <div className="flex flex-wrap gap-4 mt-3 items-end">
           <MetricPill label="Market Cap" value={formatCr(company.market_cap_cr)} />
           <MetricPill label="CMP" value={company.cmp ? `₹${parseFloat(String(company.cmp)).toFixed(0)}` : "—"} />
           <MetricPill label="Promoter" value={formatPercent(company.promoter_holding_pct)} />
@@ -96,6 +99,21 @@ export function CompanyHeader({ symbol }: CompanyHeaderProps) {
           )}
           {company.week52_low && (
             <MetricPill label="52W Low" value={`₹${parseFloat(String(company.week52_low)).toFixed(0)}`} />
+          )}
+          {/* Market sync status badge */}
+          {syncLabel && (
+            <div className={cn(
+              "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border self-end mb-0.5",
+              syncLabel.isLive
+                ? "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
+                : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700"
+            )}>
+              {syncLabel.isLive
+                ? <Wifi className="w-3 h-3" />
+                : <WifiOff className="w-3 h-3" />
+              }
+              {syncLabel.label}
+            </div>
           )}
         </div>
       </div>
@@ -147,4 +165,47 @@ function MetricPill({ label, value }: { label: string; value: string }) {
       <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{value}</span>
     </div>
   );
+}
+
+/**
+ * Returns a formatted price-sync label based on when CMP was last updated.
+ * Shows "Live" during NSE trading hours (Mon–Fri 9:15–15:30 IST),
+ * otherwise "Closed · Last HH:MM IST" or "Closed · DD MMM HH:MM IST".
+ */
+function getCmpSyncLabel(updatedAt: string | null): { label: string; isLive: boolean } | null {
+  if (!updatedAt) return null;
+
+  const now = new Date();
+  const updated = new Date(updatedAt);
+
+  // Convert to IST (UTC+5:30)
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const nowIST = new Date(now.getTime() + IST_OFFSET_MS);
+  const updatedIST = new Date(updated.getTime() + IST_OFFSET_MS);
+
+  const dayOfWeek = nowIST.getUTCDay(); // 0=Sun … 6=Sat
+  const totalMinutes = nowIST.getUTCHours() * 60 + nowIST.getUTCMinutes();
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+  const isMarketOpen =
+    isWeekday && totalMinutes >= 9 * 60 + 15 && totalMinutes <= 15 * 60 + 30;
+
+  const hh = String(updatedIST.getUTCHours()).padStart(2, "0");
+  const mm = String(updatedIST.getUTCMinutes()).padStart(2, "0");
+  const timeStr = `${hh}:${mm} IST`;
+
+  const todayIST = nowIST;
+  const isSameDay =
+    updatedIST.getUTCFullYear() === todayIST.getUTCFullYear() &&
+    updatedIST.getUTCMonth()    === todayIST.getUTCMonth() &&
+    updatedIST.getUTCDate()     === todayIST.getUTCDate();
+
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const datePrefix = isSameDay
+    ? ""
+    : `${updatedIST.getUTCDate()} ${MONTHS[updatedIST.getUTCMonth()]} `;
+
+  if (isMarketOpen) {
+    return { label: `Live · ${timeStr}`, isLive: true };
+  }
+  return { label: `Closed · Last ${datePrefix}${timeStr}`, isLive: false };
 }

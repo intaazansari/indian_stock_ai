@@ -25,6 +25,7 @@ import argparse
 import asyncio
 import sys
 import time
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -143,6 +144,8 @@ async def refresh_prices(
                         update_vals["week52_high"] = Decimal(str(fetched["week52_high"]))
                     if fetched["week52_low"] is not None:
                         update_vals["week52_low"] = Decimal(str(fetched["week52_low"]))
+                    # Always stamp updated_at so the UI can show last-sync time
+                    update_vals["updated_at"] = datetime.now(timezone.utc)
                     if update_vals:
                         await session.execute(
                             update(Company)

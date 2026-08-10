@@ -20,6 +20,7 @@ export interface Company {
   founded_year: number | null;
   headquarters: string | null;
   employee_count: number | null;
+  updated_at: string | null;
 }
 
 export interface CompanySearchResult {

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel, Field
 
@@ -37,6 +38,7 @@ class CompanyDetail(CompanyBrief):
     face_value: Decimal | None
     week52_high: Decimal | None = None
     week52_low: Decimal | None = None
+    updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
