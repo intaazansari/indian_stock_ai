@@ -1,7 +1,7 @@
 "use client";
 
 import { useQualityScore } from "@/hooks/useAIAnalysis";
-import { cn, getScoreColor, getScoreBg } from "@/lib/utils";
+import { cn, getScoreColor, getScoreBg, formatUpdatedAt } from "@/lib/utils";
 import type { ScoreItem } from "@/types/analysis";
 
 interface QualityScoreCardProps {
@@ -37,7 +37,13 @@ export function QualityScoreCard({ symbol }: QualityScoreCardProps) {
     <div className="rounded-xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 overflow-hidden">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-900 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Quality Score</h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Quality Score</h2>
+          <span className="text-xs font-mono font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950 px-1.5 py-0.5 rounded">{symbol}</span>
+          {data.generated_at && (
+            <span className="text-xs text-gray-400">· Updated {formatUpdatedAt(data.generated_at)}</span>
+          )}
+        </div>
         <span className="text-xs text-gray-400 dark:text-gray-500">AI-generated</span>
       </div>
 
