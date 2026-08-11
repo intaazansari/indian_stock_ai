@@ -24,16 +24,24 @@ export function ExecutiveSummaryCard({ symbol }: ExecutiveSummaryProps) {
   }
 
   if (error && !data) {
-    const is404 = (error as { status?: number })?.status === 404 ||
-      (error as { response?: { status?: number } })?.response?.status === 404;
+    const httpStatus =
+      (error as { status?: number })?.status ??
+      (error as { response?: { status?: number } })?.response?.status;
+    const is404 = httpStatus === 404;
+    // Non-404 with no response (network/timeout) means the backend is waking up on Render
+    const isNetworkError = !httpStatus;
+    const statusMessage = is404
+      ? "No AI analysis generated yet."
+      : isNetworkError
+      ? "Service is starting up — this may take ~30 s on first load."
+      : "Failed to load analysis.";
+
     return (
       <div className="rounded-xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
             <Sparkles className="w-4 h-4 shrink-0 text-brand-400" />
-            <p className="text-sm">
-              {is404 ? "No AI analysis yet." : "Failed to load analysis."}
-            </p>
+            <p className="text-sm">{statusMessage}</p>
           </div>
           <button
             onClick={startStream}
@@ -41,7 +49,7 @@ export function ExecutiveSummaryCard({ symbol }: ExecutiveSummaryProps) {
             className="flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={cn("w-3 h-3", isStreaming && "animate-spin")} />
-            {isStreaming ? "Analysing…" : "Analyse"}
+            {isStreaming ? "Analysing…" : is404 ? "Generate" : "Retry"}
           </button>
         </div>
         {isStreaming && (

@@ -41,7 +41,11 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Never attempt a token refresh for auth endpoints themselves (login, refresh, register).
+    // Doing so causes a page-reload race that swallows the "invalid credentials" error.
+    const isAuthEndpoint = originalRequest.url?.includes("/auth/");
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem("refresh_token");
