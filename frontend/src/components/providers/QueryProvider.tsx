@@ -12,7 +12,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
           queries: {
             staleTime: 5 * 60 * 1000,     // 5 minutes
             gcTime: 30 * 60 * 1000,        // 30 minutes
-            retry: 2,
+            // 1 retry: enough for a transient blip, but not so many that
+            // we hammer a sleeping backend before it has time to wake up.
+            retry: 1,
             refetchOnWindowFocus: false,
           },
         },
