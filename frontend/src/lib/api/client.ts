@@ -80,9 +80,16 @@ export type ApiError = {
 
 export function parseApiError(error: unknown): ApiError {
   if (axios.isAxiosError(error)) {
+    if (!error.response) {
+      // Network error — server not reachable (likely waking up on Render free tier)
+      return {
+        detail: "Server is starting up. Please wait ~30 s and try again.",
+        status: 0,
+      };
+    }
     return {
-      detail: (error.response?.data as { detail?: string })?.detail ?? "An error occurred",
-      status: error.response?.status ?? 500,
+      detail: (error.response.data as { detail?: string })?.detail ?? "An error occurred",
+      status: error.response.status,
     };
   }
   return { detail: "An unexpected error occurred", status: 500 };

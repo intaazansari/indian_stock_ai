@@ -22,8 +22,10 @@ function AnalysePrompt({ onAnalyse, isStreaming }: { onAnalyse: () => void; isSt
 }
 
 export function ValuationTab({ symbol }: { symbol: string }) {
-  const { data, isLoading } = useAIAnalysis<ValuationAnalysisResponse>(symbol, "valuation");
+  const { data, isLoading, error, refetch } = useAIAnalysis<ValuationAnalysisResponse>(symbol, "valuation");
   const { isStreaming, startStream } = useStreamAnalysis(symbol, "valuation");
+
+  const isNetworkError = error && !(error as { response?: unknown })?.response;
 
   const header = (
     <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-900 flex items-center justify-between">
@@ -59,7 +61,16 @@ export function ValuationTab({ symbol }: { symbol: string }) {
     <div className="rounded-xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 overflow-hidden">
       {header}
       {!data
-        ? <AnalysePrompt onAnalyse={startStream} isStreaming={isStreaming} />
+        ? isNetworkError
+          ? (
+            <div className="px-5 py-8 text-center space-y-3">
+              <p className="text-sm text-gray-400">Service is starting up — this may take ~30 s on first load.</p>
+              <button onClick={() => refetch()} className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">
+                <RefreshCw className="w-3 h-3" /> Retry
+              </button>
+            </div>
+          )
+          : <AnalysePrompt onAnalyse={startStream} isStreaming={isStreaming} />
         : (
           <div className="p-5 space-y-6">
             {/* PE Comparison */}

@@ -27,7 +27,7 @@ function Num({ value, suffix = "", good = "high" }: {
 }
 
 export function PeersTab({ symbol }: Props) {
-  const { data: peers, isLoading, error } = usePeers(symbol);
+  const { data: peers, isLoading, error, refetch, isFetching } = usePeers(symbol);
 
   if (isLoading) {
     return (
@@ -38,9 +38,22 @@ export function PeersTab({ symbol }: Props) {
   }
 
   if (error || !peers?.length) {
+    const isNetwork = error && !(error as { response?: unknown })?.response;
     return (
-      <div className="rounded-xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 px-5 py-8 text-center text-sm text-gray-400">
-        No peer data available.
+      <div className="rounded-xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 px-5 py-8 text-center space-y-3">
+        <p className="text-sm text-gray-400">
+          {isNetwork ? "Service is starting up — this may take ~30 s on first load." : "No peer data available."}
+        </p>
+        {isNetwork && (
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors disabled:opacity-50"
+          >
+            <svg className={`w-3 h-3 ${isFetching ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            {isFetching ? "Loading…" : "Retry"}
+          </button>
+        )}
       </div>
     );
   }

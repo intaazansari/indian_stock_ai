@@ -14,7 +14,7 @@ interface CompanyHeaderProps {
 
 export function CompanyHeader({ symbol }: CompanyHeaderProps) {
   const router = useRouter();
-  const { data: company, isLoading } = useCompany(symbol);
+  const { data: company, isLoading, error: companyError, refetch: refetchCompany } = useCompany(symbol);
 
   const handleBack = () => {
     const saved = sessionStorage.getItem("company_back_url");
@@ -71,7 +71,31 @@ export function CompanyHeader({ symbol }: CompanyHeaderProps) {
     );
   }
 
-  if (!company) return null;
+  if (!company) {
+    const isNetwork = !(companyError as { response?: unknown } | null)?.response;
+    return (
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white w-fit transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+          Back
+        </button>
+        <p className="text-sm text-gray-400">
+          {isNetwork ? "Service is starting up — please retry in ~30 s." : "Company not found."}
+        </p>
+        {isNetwork && (
+          <button
+            onClick={() => refetchCompany()}
+            className="text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 font-medium w-fit"
+          >
+            Retry
+          </button>
+        )}
+      </div>
+    );
+  }
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const syncLabel = getCmpSyncLabel(company.updated_at ?? null);

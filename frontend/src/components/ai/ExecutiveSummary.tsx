@@ -9,7 +9,7 @@ interface ExecutiveSummaryProps {
 }
 
 export function ExecutiveSummaryCard({ symbol }: ExecutiveSummaryProps) {
-  const { data, isLoading, error } = useExecutiveSummary(symbol);
+  const { data, isLoading, error, refetch } = useExecutiveSummary(symbol);
   const { streamContent, isStreaming, startStream } = useStreamAnalysis(symbol, "summary");
 
   if (isLoading) {
@@ -44,7 +44,7 @@ export function ExecutiveSummaryCard({ symbol }: ExecutiveSummaryProps) {
             <p className="text-sm">{statusMessage}</p>
           </div>
           <button
-            onClick={startStream}
+            onClick={is404 ? startStream : () => refetch()}
             disabled={isStreaming}
             className="flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors disabled:opacity-50"
           >
