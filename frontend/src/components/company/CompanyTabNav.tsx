@@ -22,7 +22,9 @@ export function CompanyTabNav({ symbol }: Props) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-1 border-b border-gray-100 dark:border-gray-900">
+    // overflow-x-auto: tabs scroll horizontally on mobile instead of the whole page
+    // -mx-4 px-4: extend scroll area to screen edges (counters parent px-4 padding)
+    <nav className="flex gap-1 border-b border-gray-100 dark:border-gray-900 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
       {COMPANY_TABS.map((tab) => {
         const href = `/company/${symbol}${tab.href}`;
         // Overview tab: exact match; others: starts-with match
@@ -35,7 +37,7 @@ export function CompanyTabNav({ symbol }: Props) {
             key={tab.href}
             href={href}
             className={cn(
-              "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
+              "shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
               isActive
                 ? "text-gray-900 dark:text-white border-brand-600 dark:border-brand-400"
                 : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white border-transparent hover:border-gray-300 dark:hover:border-gray-600"

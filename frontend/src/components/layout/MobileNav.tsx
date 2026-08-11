@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Search, BookMarked, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Search, BookMarked, TrendingUp, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/screener",  icon: Search,          label: "Screener" },
   { href: "/watchlist", icon: BookMarked,       label: "Watchlist" },
   { href: "/portfolio", icon: TrendingUp,       label: "Portfolio" },
+  { href: "/settings",  icon: Settings,         label: "Settings" },
 ];
 
 export function MobileNav() {
