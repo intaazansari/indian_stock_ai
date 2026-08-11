@@ -15,14 +15,19 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // API proxy — avoids CORS issues in development
-  // In production, nginx handles this
+  // API proxy — routes all backend calls through Next.js to avoid CORS.
+  // The browser always calls the same origin (valuepilotage.com); Next.js
+  // server-side proxies to the backend URL.
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     return [
       {
         source: "/api/:path*",
         destination: `${apiUrl}/api/:path*`,
+      },
+      {
+        source: "/health",
+        destination: `${apiUrl}/health`,
       },
     ];
   },

@@ -17,10 +17,9 @@ import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
 async function pingHealth() {
-  const { data } = await axios.get(`${API_BASE_URL}/health`, { timeout: 8_000 });
+  // /health is proxied by Next.js rewrite to the backend — same origin, no CORS.
+  const { data } = await axios.get("/health", { timeout: 8_000 });
   return data as { status: string };
 }
 

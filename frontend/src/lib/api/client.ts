@@ -13,10 +13,11 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
+// Use a relative baseURL so all requests go through the Next.js proxy rewrite
+// (next.config.ts: /api/:path* → NEXT_PUBLIC_API_URL/api/:path*).
+// This eliminates cross-origin requests entirely — no CORS needed.
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: `${API_BASE_URL}/api/v1`,
+  baseURL: "/api/v1",
   headers: { "Content-Type": "application/json" },
   timeout: 30_000,
 });
@@ -52,7 +53,7 @@ apiClient.interceptors.response.use(
         if (!refreshToken) throw new Error("No refresh token");
 
         const { data } = await axios.post(
-          `${API_BASE_URL}/api/v1/auth/refresh`,
+          `/api/v1/auth/refresh`,
           { refresh_token: refreshToken }
         );
         localStorage.setItem("access_token", data.access_token);

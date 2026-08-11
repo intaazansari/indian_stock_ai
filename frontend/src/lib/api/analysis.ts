@@ -47,7 +47,7 @@ export const analysisApi = {
   ): Promise<void> => {
     const token = localStorage.getItem("access_token");
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/companies/${symbol}/analysis/stream`,
+      `/api/v1/companies/${symbol}/analysis/stream`,
       {
         method: "POST",
         headers: {
