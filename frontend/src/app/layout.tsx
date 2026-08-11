@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { BackendWakeupBanner } from "@/components/providers/BackendWakeupBanner";
 import "./globals.css";
@@ -42,6 +43,7 @@ export default function RootLayout({
             {children}
           </QueryProvider>
         </ThemeProvider>
+        <GoogleAnalytics gaId="G-J62F8KGPEJ" />
       </body>
     </html>
   );
