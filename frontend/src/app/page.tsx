@@ -10,15 +10,37 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
-      <nav className="border-b border-gray-100 dark:border-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      <nav className="border-b border-gray-100 dark:border-gray-900 sticky top-0 bg-white dark:bg-gray-950 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
               <Brain className="w-4 h-4 text-white" />
             </div>
             <span className="font-semibold text-gray-900 dark:text-white">ValuePilotage</span>
+          </Link>
+
+          {/* Centre nav links */}
+          <div className="hidden sm:flex items-center gap-1">
+            {[
+              { href: "/",           label: "Home"      },
+              { href: "/dashboard",  label: "Dashboard" },
+              { href: "/screener",   label: "Screener"  },
+              { href: "/watchlist",  label: "Watchlist" },
+              { href: "/portfolio",  label: "Portfolio" },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Right: auth actions */}
+          <div className="flex items-center gap-3 shrink-0">
             <LandingNavActions />
           </div>
         </div>

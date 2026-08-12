@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Search, BookMarked, TrendingUp, Settings } from "lucide-react";
+import { Home, LayoutDashboard, Search, BookMarked, TrendingUp, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Discover" },
-  { href: "/screener",  icon: Search,          label: "Screener" },
-  { href: "/watchlist", icon: BookMarked,       label: "Watchlist" },
-  { href: "/portfolio", icon: TrendingUp,       label: "Portfolio" },
-  { href: "/settings",  icon: Settings,         label: "Settings" },
+  { href: "/",          icon: Home,            label: "Home"      },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Discover"  },
+  { href: "/screener",  icon: Search,          label: "Screener"  },
+  { href: "/watchlist", icon: BookMarked,      label: "Watchlist" },
+  { href: "/settings",  icon: Settings,        label: "Settings"  },
 ];
 
 export function MobileNav() {

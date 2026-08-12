@@ -10,15 +10,17 @@ import {
   TrendingUp,
   Brain,
   Settings,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Discover" },
-  { href: "/screener", icon: Search, label: "Screener" },
-  { href: "/watchlist", icon: BookMarked, label: "Watchlist" },
-  { href: "/portfolio", icon: TrendingUp, label: "Portfolio" },
+  { href: "/",         icon: Home,            label: "Home"      },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Discover"  },
+  { href: "/screener",  icon: Search,          label: "Screener"  },
+  { href: "/watchlist", icon: BookMarked,      label: "Watchlist" },
+  { href: "/portfolio", icon: TrendingUp,      label: "Portfolio" },
 ];
 
 export function Sidebar() {
