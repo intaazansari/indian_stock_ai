@@ -1,12 +1,20 @@
-import type { Metadata } from "next";
+"use client";
 import Link from "next/link";
-import { ArrowRight, BarChart3, Brain, Shield, TrendingUp, Zap } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, BarChart3, Brain, Menu, Shield, TrendingUp, X, Zap } from "lucide-react";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { LandingNavActions } from "@/components/layout/AuthRedirect";
 
-export const metadata: Metadata = { title: "Home" };
+const NAV_LINKS = [
+  { href: "/",          label: "Home"      },
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/screener",  label: "Screener"  },
+  { href: "/watchlist", label: "Watchlist" },
+  { href: "/portfolio", label: "Portfolio" },
+];
 
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
@@ -20,15 +28,9 @@ export default function LandingPage() {
             <span className="font-semibold text-gray-900 dark:text-white">ValuePilotage</span>
           </Link>
 
-          {/* Centre nav links */}
+          {/* Centre nav links — desktop */}
           <div className="hidden sm:flex items-center gap-1">
-            {[
-              { href: "/",           label: "Home"      },
-              { href: "/dashboard",  label: "Dashboard" },
-              { href: "/screener",   label: "Screener"  },
-              { href: "/watchlist",  label: "Watchlist" },
-              { href: "/portfolio",  label: "Portfolio" },
-            ].map((item) => (
+            {NAV_LINKS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -39,11 +41,35 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* Right: auth actions */}
+          {/* Right: auth actions + hamburger */}
           <div className="flex items-center gap-3 shrink-0">
             <LandingNavActions />
+            {/* Hamburger — mobile only */}
+            <button
+              className="sm:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+              onClick={() => setMobileMenuOpen((o) => !o)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 px-4 py-3 flex flex-col gap-1">
+            {NAV_LINKS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        )}
       </nav>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
