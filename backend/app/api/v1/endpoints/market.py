@@ -25,37 +25,59 @@ INDICES = [
 
 
 def _fetch_all_indices() -> list[dict]:
-    """Bulk-download last 2 days of OHLCV for all index symbols.
+    """Bulk-download last 5 days of OHLCV for all index symbols.
 
-    Using yf.download() is more reliable than individual Ticker.fast_info
-    calls on cloud servers where per-ticker requests may be rate-limited.
+    Uses yf.download() for reliability on cloud servers.
+    Falls back to individual Ticker.history() for any symbol with missing data.
     """
     symbols = [idx["symbol"] for idx in INDICES]
-    data = yf.download(
-        symbols,
-        period="5d",
-        interval="1d",
-        progress=False,
-        auto_adjust=True,
-    )
 
-    close = data["Close"] if "Close" in data.columns.get_level_values(0) else data
+    # --- Primary: bulk download ---
+    bulk: dict[str, tuple[float, float]] = {}  # symbol -> (price, prev)
+    try:
+        data = yf.download(
+            symbols,
+            period="5d",
+            interval="1d",
+            progress=False,
+            auto_adjust=True,
+        )
+        close = data["Close"]
+        for sym in symbols:
+            try:
+                col = close[sym].dropna()
+                if len(col) >= 1:
+                    price = float(col.iloc[-1])
+                    prev  = float(col.iloc[-2]) if len(col) >= 2 else price
+                    if not math.isnan(price):
+                        bulk[sym] = (price, prev)
+            except Exception:
+                pass
+    except Exception:
+        pass  # all symbols will fall through to individual fetch
+
+    # --- Fallback: individual Ticker.history() for missing symbols ---
+    for sym in symbols:
+        if sym not in bulk:
+            try:
+                hist = yf.Ticker(sym).history(period="5d", interval="1d")
+                col = hist["Close"].dropna()
+                if len(col) >= 1:
+                    price = float(col.iloc[-1])
+                    prev  = float(col.iloc[-2]) if len(col) >= 2 else price
+                    bulk[sym] = (price, prev)
+            except Exception:
+                pass
 
     out = []
     for idx in INDICES:
         sym = idx["symbol"]
-        try:
-            col = close[sym].dropna()
-            if len(col) < 1:
-                raise ValueError("no data")
-            price = float(col.iloc[-1])
-            prev  = float(col.iloc[-2]) if len(col) >= 2 else price
-            if math.isnan(price):
-                raise ValueError("NaN price")
+        if sym in bulk:
+            price, prev = bulk[sym]
             change     = round(price - prev, 2)
             change_pct = round((change / prev * 100) if prev else 0.0, 2)
             out.append({**idx, "price": round(price, 2), "change": change, "change_pct": change_pct})
-        except Exception:
+        else:
             out.append({**idx, "price": None, "change": None, "change_pct": None})
 
     return out
