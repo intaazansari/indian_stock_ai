@@ -7,6 +7,7 @@ export interface MarketIndex {
   price: number | null;
   change: number | null;
   change_pct: number | null;
+  as_of?: string;
 }
 
 export const marketApi = {

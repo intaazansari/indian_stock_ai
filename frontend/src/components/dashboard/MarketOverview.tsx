@@ -60,6 +60,7 @@ function SkeletonCard() {
 export function MarketOverview() {
   const { data, isLoading } = useMarketIndices();
   const market = getNseMarketStatus();
+  const asOf = data?.[0]?.as_of;
 
   return (
     <section>
@@ -67,18 +68,25 @@ export function MarketOverview() {
         <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           Market Overview
         </h2>
-        <span className={cn(
-          "flex items-center gap-1 text-xs font-medium",
-          market.isOpen
-            ? "text-emerald-600 dark:text-emerald-400"
-            : "text-gray-400 dark:text-gray-500"
-        )}>
-          {market.isOpen
-            ? <Wifi className="w-3 h-3" />
-            : <WifiOff className="w-3 h-3" />
-          }
-          {market.label}
-        </span>
+        <div className="flex items-center gap-3">
+          {!market.isOpen && asOf && (
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              as of {asOf}
+            </span>
+          )}
+          <span className={cn(
+            "flex items-center gap-1 text-xs font-medium",
+            market.isOpen
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-gray-400 dark:text-gray-500"
+          )}>
+            {market.isOpen
+              ? <Wifi className="w-3 h-3" />
+              : <WifiOff className="w-3 h-3" />
+            }
+            {market.label}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

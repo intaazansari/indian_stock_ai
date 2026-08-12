@@ -3,17 +3,30 @@ from __future__ import annotations
 
 import asyncio
 import math
+from datetime import datetime, time as dt_time
 from time import time
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import yfinance as yf
 from fastapi import APIRouter
 
 router = APIRouter()
 
+_IST = ZoneInfo("Asia/Kolkata")
+
 # Simple in-process cache: (data, fetched_at)
 _cache: dict[str, Any] = {}
-_CACHE_TTL = 60  # seconds
+_CACHE_TTL_OPEN   =    60  # seconds — live during trading hours
+_CACHE_TTL_CLOSED = 4 * 3600  # 4 h — data doesn't change when market is closed
+
+
+def _is_market_open() -> bool:
+    now = datetime.now(_IST)
+    if now.weekday() >= 5:          # Saturday / Sunday
+        return False
+    t = now.time()
+    return dt_time(9, 15) <= t <= dt_time(15, 30)
 
 INDICES = [
     {"symbol": "^NSEI",       "name": "NIFTY 50",    "short": "NIFTY"},
@@ -87,11 +100,16 @@ def _fetch_all_indices() -> list[dict]:
 async def get_market_indices() -> list[dict]:
     global _cache
     now = time()
-    if "data" in _cache and now - _cache.get("ts", 0) < _CACHE_TTL:
+    ttl = _CACHE_TTL_OPEN if _is_market_open() else _CACHE_TTL_CLOSED
+    if "data" in _cache and now - _cache.get("ts", 0) < ttl:
         return _cache["data"]
 
     loop = asyncio.get_event_loop()
-    out = await loop.run_in_executor(None, _fetch_all_indices)
+    indices = await loop.run_in_executor(None, _fetch_all_indices)
+
+    # Attach a human-readable timestamp so the frontend can show "as of HH:MM"
+    as_of = datetime.now(_IST).strftime("%d %b %I:%M %p IST")
+    out = [{**idx, "as_of": as_of} for idx in indices]
 
     _cache = {"data": out, "ts": now}
     return out
