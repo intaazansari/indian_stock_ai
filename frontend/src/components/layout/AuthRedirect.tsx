@@ -1,7 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
+
+/**
+ * Invisible component placed on the landing page.
+ * If the user is already logged in, redirects them straight to /dashboard
+ * so they don't have to manually click "Go to Dashboard".
+ */
+export function LandingAuthRedirect() {
+  const router = useRouter();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isAuthenticated, router]);
+
+  return null;
+}
 
 export function LandingNavActions() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
