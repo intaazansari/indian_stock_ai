@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
-import { ArrowRight, BarChart3, Brain, Menu, Shield, TrendingUp, X, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, Brain, Shield, TrendingUp, Zap } from "lucide-react";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { LandingNavActions } from "@/components/layout/AuthRedirect";
+import { MobileNav } from "@/components/layout/MobileNav";
 
 const NAV_LINKS = [
   { href: "/",          label: "Home"      },
@@ -14,9 +14,8 @@ const NAV_LINKS = [
 ];
 
 export default function LandingPage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-white dark:bg-gray-950 pb-16 lg:pb-0">
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
       <nav className="border-b border-gray-100 dark:border-gray-900 sticky top-0 bg-white dark:bg-gray-950 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
@@ -41,35 +40,11 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* Right: auth actions + hamburger */}
+          {/* Right: auth actions */}
           <div className="flex items-center gap-3 shrink-0">
             <LandingNavActions />
-            {/* Hamburger — mobile only */}
-            <button
-              className="sm:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-              onClick={() => setMobileMenuOpen((o) => !o)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
-
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 px-4 py-3 flex flex-col gap-1">
-            {NAV_LINKS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        )}
       </nav>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
@@ -146,6 +121,9 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      {/* Bottom nav — mobile only, same as dashboard */}
+      <MobileNav />
     </div>
   );
 }
