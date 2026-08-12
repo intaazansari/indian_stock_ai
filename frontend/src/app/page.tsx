@@ -2,15 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BarChart3, Brain, Shield, TrendingUp, Zap } from "lucide-react";
 import { SearchBar } from "@/components/layout/SearchBar";
-import { LandingNavActions, LandingAuthRedirect } from "@/components/layout/AuthRedirect";
+import { LandingNavActions } from "@/components/layout/AuthRedirect";
 
 export const metadata: Metadata = { title: "Home" };
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      {/* Auto-redirect logged-in users to /dashboard */}
-      <LandingAuthRedirect />
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
       <nav className="border-b border-gray-100 dark:border-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
