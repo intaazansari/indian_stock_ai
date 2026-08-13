@@ -338,8 +338,8 @@ async def seed_company(
         if use_screener:
             screener = ScreenerFetcher()
             try:
-                screener_data = screener.fetch_holding_data(nse_symbol)
-                screener_financials = screener.fetch_financials(nse_symbol)
+                screener_data = screener.fetch_holding_data(nse_symbol, bse_code=bse_code)
+                screener_financials = screener.fetch_financials(nse_symbol, bse_code=bse_code)
                 status["scrn_pl"] = len(screener_financials.get("income_statements", []))
                 if status["scrn_pl"] == 0:
                     status["scrn_err"] = "no data"

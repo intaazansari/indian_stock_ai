@@ -64,7 +64,41 @@ class ScreenerFetcher:
         self._session = requests.Session()
         self._session.headers.update(HEADERS)
 
-    def fetch_holding_data(self, nse_symbol: str) -> dict[str, Any]:
+    def _get_company_page(
+        self, nse_symbol: str, bse_code: str | None = None
+    ) -> "requests.Response | None":
+        """
+        Fetch the Screener.in company page, trying multiple URL patterns.
+
+        Some companies (e.g. LTIM, TATAMOTORS) are indexed by BSE code on
+        Screener.in instead of NSE symbol.  We try four URLs in priority order:
+          1. /company/{nse_symbol}/consolidated/
+          2. /company/{nse_symbol}/
+          3. /company/{bse_code}/consolidated/   (if bse_code given)
+          4. /company/{bse_code}/               (if bse_code given)
+        """
+        slugs: list[str] = [nse_symbol]
+        if bse_code:
+            slugs.append(bse_code)
+
+        for slug in slugs:
+            for suffix in ["/consolidated/", "/"]:
+                url = f"{SCREENER_BASE}/company/{slug}{suffix}"
+                try:
+                    resp = self._session.get(url, timeout=TIMEOUT)
+                    time.sleep(self.delay)
+                    if resp.status_code == 200:
+                        logger.info("screener.page.found", symbol=nse_symbol, url=url)
+                        return resp
+                except Exception as exc:
+                    logger.warning("screener.page.error", symbol=nse_symbol, url=url, error=str(exc))
+
+        logger.warning("screener.page.not_found", symbol=nse_symbol, bse_code=bse_code)
+        return None
+
+    def fetch_holding_data(
+        self, nse_symbol: str, bse_code: str | None = None
+    ) -> dict[str, Any]:
         """
         Fetch shareholding data from Screener.in.
 
@@ -85,22 +119,12 @@ class ScreenerFetcher:
             "bse_code":             None,
         }
 
-        url = f"{SCREENER_BASE}/company/{nse_symbol}/consolidated/"
+        resp = self._get_company_page(nse_symbol, bse_code)
         try:
-            resp = self._session.get(url, timeout=TIMEOUT)
-            time.sleep(self.delay)
-
-            if resp.status_code == 404:
-                # Try standalone if consolidated doesn't exist
-                url = f"{SCREENER_BASE}/company/{nse_symbol}/"
-                resp = self._session.get(url, timeout=TIMEOUT)
-                time.sleep(self.delay)
-
-            if resp.status_code != 200:
+            if resp is None or resp.status_code != 200:
                 logger.warning(
                     "screener.fetch.failed",
                     symbol=nse_symbol,
-                    status=resp.status_code,
                 )
                 return result
 
@@ -386,7 +410,9 @@ class ScreenerFetcher:
             })
         return results
 
-    def fetch_financials(self, nse_symbol: str) -> dict[str, Any]:
+    def fetch_financials(
+        self, nse_symbol: str, bse_code: str | None = None
+    ) -> dict[str, Any]:
         """
         Scrape 10+ years of annual financial statements from Screener.in.
 
@@ -399,17 +425,8 @@ class ScreenerFetcher:
             "cash_flows":        [],
         }
 
-        for path in [f"/company/{nse_symbol}/consolidated/", f"/company/{nse_symbol}/"]:
-            url = SCREENER_BASE + path
-            try:
-                resp = self._session.get(url, timeout=TIMEOUT)
-                time.sleep(self.delay)
-                if resp.status_code == 200:
-                    break
-            except Exception as exc:
-                logger.warning("screener.financials.request_error", symbol=nse_symbol, error=str(exc))
-                return result
-        else:
+        resp = self._get_company_page(nse_symbol, bse_code)
+        if resp is None:
             logger.warning("screener.financials.not_found", symbol=nse_symbol)
             return result
 
