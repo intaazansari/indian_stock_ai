@@ -30,6 +30,13 @@ function formatPrice(v: number) {
   return `₹${v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Compact Y-axis label — keeps the axis narrow on mobile */
+function formatYAxis(v: number) {
+  if (v >= 1_00_000) return `₹${(v / 1_00_000).toFixed(1)}L`;
+  if (v >= 10_000)   return `₹${(v / 1_000).toFixed(1)}K`;
+  return `₹${v.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+}
+
 function formatVolume(v: number) {
   if (v >= 1_00_00_000) return `${(v / 1_00_00_000).toFixed(2)}Cr`;
   if (v >= 1_00_000) return `${(v / 1_00_000).toFixed(2)}L`;
@@ -122,7 +129,7 @@ export function PriceChart({ symbol }: PriceChartProps) {
             <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Price Chart</span>
           </div>
           {!isLoading && data?.length && (
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
               <span className="text-2xl font-bold text-gray-900 dark:text-white">
                 {formatPrice(last)}
               </span>
@@ -135,7 +142,7 @@ export function PriceChart({ symbol }: PriceChartProps) {
                 {isPositive ? "+" : ""}
                 {formatPrice(change)} ({isPositive ? "+" : ""}{changePct.toFixed(2)}%)
               </span>
-              <span className="text-xs text-gray-400 dark:text-gray-500">
+              <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">
                 {PERIODS.find((p) => p.value === period)?.label}
               </span>
             </div>
@@ -148,7 +155,7 @@ export function PriceChart({ symbol }: PriceChartProps) {
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+              className={`px-2.5 py-1.5 min-h-[2rem] text-xs font-medium rounded-md transition-all ${
                 period === p.value
                   ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -207,19 +214,19 @@ export function PriceChart({ symbol }: PriceChartProps) {
                 tickFormatter={(v) => formatXAxis(v, period)}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "currentColor" }}
+                tick={{ fontSize: 10, fill: "currentColor" }}
                 className="text-gray-400 dark:text-gray-500"
                 tickLine={false}
                 axisLine={false}
-                width={72}
-                tickFormatter={(v) =>
-                  `₹${Number(v).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
-                }
+                width={56}
+                tickFormatter={formatYAxis}
                 domain={["auto", "auto"]}
               />
               <Tooltip
                 content={<CustomTooltip isPositive={isPositive} />}
                 cursor={{ stroke: colorStroke, strokeWidth: 1, strokeDasharray: "4 2" }}
+                allowEscapeViewBox={{ x: false, y: true }}
+                offset={8}
               />
               <Area
                 type="monotone"
