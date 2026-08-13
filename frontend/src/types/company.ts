@@ -52,3 +52,12 @@ export interface PeerCompany {
   debt_equity_ratio: string | number | null;
   revenue_growth_pct: string | number | null;
 }
+
+export interface PricePoint {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
