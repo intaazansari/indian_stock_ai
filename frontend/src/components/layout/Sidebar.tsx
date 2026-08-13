@@ -52,7 +52,7 @@ export function Sidebar() {
                 "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
                 isActive
                   ? "bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white font-medium"
-                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-800 dark:hover:text-gray-200"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white"
               )}
             >
               <item.icon className="w-4 h-4 shrink-0" />
@@ -66,7 +66,7 @@ export function Sidebar() {
       <div className="px-2 pb-4">
         <Link
           href="/settings"
-          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           <Settings className="w-4 h-4" />
           Settings
