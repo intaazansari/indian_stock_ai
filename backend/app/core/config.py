@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # ── Security ──────────────────────────────────────────────────────────────
-    SECRET_KEY: str
+    # Required for the web server (JWT signing). Not needed by standalone scripts.
+    # Leave empty when running seed/refresh scripts outside the web server context.
+    SECRET_KEY: str = ""
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     ALGORITHM: str = "HS256"
@@ -89,7 +91,7 @@ class Settings(BaseSettings):
     @field_validator("SECRET_KEY")
     @classmethod
     def secret_key_must_be_strong(cls, v: str) -> str:
-        if len(v) < 32:
+        if v and len(v) < 32:   # only validate when a key is actually provided
             raise ValueError("SECRET_KEY must be at least 32 characters")
         return v
 
