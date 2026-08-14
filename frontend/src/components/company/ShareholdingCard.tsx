@@ -104,14 +104,14 @@ export function ShareholdingCard({ symbol }: ShareholdingCardProps) {
               </div>
 
               {/* Progress bar + value */}
-              <div className="flex items-center gap-2">
-                <div className="w-24 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+              <div className="flex items-center gap-2 flex-1 justify-end">
+                <div className="flex-1 max-w-[8rem] h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full ${s.bar}`}
                     style={{ width: `${Math.min(100, s.pct)}%` }}
                   />
                 </div>
-                <span className={`text-xs font-semibold tabular-nums w-12 text-right ${s.pct > 0 ? s.text : "text-gray-300 dark:text-gray-600"}`}>
+                <span className={`text-xs font-semibold tabular-nums shrink-0 w-12 text-right ${s.pct > 0 ? s.text : "text-gray-300 dark:text-gray-600"}`}>
                   {s.pct > 0 ? `${s.pct.toFixed(1)}%` : "—"}
                 </span>
               </div>
