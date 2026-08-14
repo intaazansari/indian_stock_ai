@@ -1,8 +1,7 @@
 name: Quarterly Financials Refresh
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Updates P&L, Balance Sheet, Cash Flow statements and Key Ratios for all
-# Nifty 50 companies after quarterly results season.
+# Updates P&L, Balance Sheet, Cash Flow statements and Key Ratios.
 #
 # Indian results calendar (approximate):
 #   Q1 (Apr–Jun)  → published by mid-August    → trigger ~Aug 15
@@ -17,14 +16,26 @@ name: Quarterly Financials Refresh
 on:
   workflow_dispatch:
     inputs:
+      index:
+        description: "Which index to refresh"
+        required: false
+        default: "nifty50"
+        type: choice
+        options:
+          - nifty50
+          - nifty500
       symbols:
-        description: "Space-separated NSE symbols (blank = full Nifty 50)"
+        description: "Space-separated NSE symbols (blank = full index)"
         required: false
         default: ""
       years:
         description: "Years of history to fetch (default 5)"
         required: false
         default: "5"
+      skip_existing:
+        description: "Skip companies that already have key ratios (safe resume)"
+        type: boolean
+        default: false
       no_screener:
         description: "Skip Screener.in (faster, no promoter data update)"
         type: boolean
@@ -39,9 +50,10 @@ on:
 
 jobs:
   refresh-financials:
-    name: Refresh financials
+    name: Refresh financials (${{ github.event.inputs.index || 'nifty50' }})
     runs-on: ubuntu-latest
-    timeout-minutes: 120   # Full Nifty 50 seed with Screener takes ~15–30 min
+    # nifty50 ~30 min | nifty500 ~4 hours — both within 6h limit
+    timeout-minutes: 360
 
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -66,9 +78,13 @@ jobs:
 
       - name: Run seed_db (upserts — safe to re-run)
         run: |
-          ARGS="--years ${{ github.event.inputs.years || '5' }}"
+          INDEX="${{ github.event.inputs.index || 'nifty50' }}"
+          ARGS="--index $INDEX --years ${{ github.event.inputs.years || '5' }}"
           if [ -n "${{ github.event.inputs.symbols }}" ]; then
             ARGS="$ARGS --symbols ${{ github.event.inputs.symbols }}"
+          fi
+          if [ "${{ github.event.inputs.skip_existing }}" = "true" ]; then
+            ARGS="$ARGS --skip-existing"
           fi
           if [ "${{ github.event.inputs.no_screener }}" = "true" ]; then
             ARGS="$ARGS --no-screener"
@@ -76,8 +92,5 @@ jobs:
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             ARGS="$ARGS --dry-run"
           fi
+          echo "Running: python -m scripts.seed_db $ARGS"
           python -m scripts.seed_db $ARGS
-
-      - name: Summary
-        if: always()
-        run: echo "Quarterly financials refresh completed. Check logs above for per-company status."
