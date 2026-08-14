@@ -1,11 +1,12 @@
 "use client";
 
-import { Brain, BookmarkPlus, BookmarkCheck, ExternalLink, Loader2, Wifi, WifiOff, ArrowLeft } from "lucide-react";
+import { TrendingUp, TrendingDown, BookmarkPlus, BookmarkCheck, ExternalLink, Loader2, Wifi, WifiOff, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { watchlistApi } from "@/lib/api/watchlist";
+import { companiesApi } from "@/lib/api/companies";
 import { formatCr, formatPercent, cn } from "@/lib/utils";
 
 interface CompanyHeaderProps {
@@ -15,6 +16,14 @@ interface CompanyHeaderProps {
 export function CompanyHeader({ symbol }: CompanyHeaderProps) {
   const router = useRouter();
   const { data: company, isLoading, error: companyError, refetch: refetchCompany } = useCompany(symbol);
+
+  // Live price — overlays DB cmp with fresh yfinance data on every page open
+  const { data: live } = useQuery({
+    queryKey: ["live-price", symbol],
+    queryFn: () => companiesApi.getLivePrice(symbol),
+    staleTime: 60_000,
+    retry: 1,
+  });
 
   const handleBack = () => {
     const saved = sessionStorage.getItem("company_back_url");
@@ -133,16 +142,50 @@ export function CompanyHeader({ symbol }: CompanyHeaderProps) {
         {/* Key metrics row */}
         <div className="flex flex-wrap gap-4 mt-3 items-end">
           <MetricPill label="Market Cap" value={formatCr(company.market_cap_cr)} />
-          <MetricPill label="CMP" value={company.cmp ? `₹${parseFloat(String(company.cmp)).toFixed(0)}` : "—"} />
+          {/* CMP — show live price if available, fallback to DB */}
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-400 dark:text-gray-500">CMP</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                {live?.cmp
+                  ? `₹${live.cmp.toFixed(0)}`
+                  : company.cmp
+                  ? `₹${parseFloat(String(company.cmp)).toFixed(0)}`
+                  : "—"}
+              </span>
+              {live?.change != null && live?.change_pct != null && (
+                <span
+                  className={cn(
+                    "flex items-center gap-0.5 text-xs font-medium",
+                    live.change >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-red-500 dark:text-red-400"
+                  )}
+                >
+                  {live.change >= 0
+                    ? <TrendingUp className="w-3 h-3" />
+                    : <TrendingDown className="w-3 h-3" />}
+                  {live.change >= 0 ? "+" : ""}{live.change_pct.toFixed(2)}%
+                </span>
+              )}
+            </div>
+          </div>
           <MetricPill label="Promoter" value={formatPercent(company.promoter_holding_pct)} />
           {company.face_value && (
             <MetricPill label="Face Value" value={`₹${company.face_value}`} />
           )}
-          {company.week52_high && (
-            <MetricPill label="52W High" value={`₹${parseFloat(String(company.week52_high)).toFixed(0)}`} />
+          {/* 52W stats — prefer live data over DB */}
+          {(live?.week52_high ?? company.week52_high) && (
+            <MetricPill
+              label="52W High"
+              value={`₹${parseFloat(String(live?.week52_high ?? company.week52_high)).toFixed(0)}`}
+            />
           )}
-          {company.week52_low && (
-            <MetricPill label="52W Low" value={`₹${parseFloat(String(company.week52_low)).toFixed(0)}`} />
+          {(live?.week52_low ?? company.week52_low) && (
+            <MetricPill
+              label="52W Low"
+              value={`₹${parseFloat(String(live?.week52_low ?? company.week52_low)).toFixed(0)}`}
+            />
           )}
           {/* Market sync status badge */}
           {syncLabel && (

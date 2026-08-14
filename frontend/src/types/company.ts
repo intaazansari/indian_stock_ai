@@ -61,3 +61,15 @@ export interface PricePoint {
   close: number;
   volume: number;
 }
+
+export interface LivePrice {
+  cmp: number;
+  prev_close: number | null;
+  change: number | null;
+  change_pct: number | null;
+  week52_high: number | null;
+  week52_low: number | null;
+  market_cap_cr: number | null;
+  volume: number | null;
+  as_of: string;
+}
