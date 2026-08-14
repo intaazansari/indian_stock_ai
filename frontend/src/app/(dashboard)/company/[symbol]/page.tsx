@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ExecutiveSummaryCard } from "@/components/ai/ExecutiveSummary";
 import { QualityScoreCard } from "@/components/company/QualityScoreCard";
 import { PriceChart } from "@/components/company/PriceChart";
+import { ShareholdingCard } from "@/components/company/ShareholdingCard";
 
 interface CompanyPageProps {
   params: Promise<{ symbol: string }>;
@@ -31,9 +32,10 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
           <ExecutiveSummaryCard symbol={upperSymbol} />
         </div>
 
-        {/* Right Column — Quality Score (1/3 width) */}
+        {/* Right Column — Quality Score + Shareholding (1/3 width) */}
         <div className="space-y-6">
           <QualityScoreCard symbol={upperSymbol} />
+          <ShareholdingCard symbol={upperSymbol} />
         </div>
       </div>
     </div>
