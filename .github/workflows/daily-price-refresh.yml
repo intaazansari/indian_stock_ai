@@ -1,0 +1,59 @@
+name: Daily Price Refresh
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs every weekday at 16:00 IST (10:30 UTC) — 30 min after NSE close (15:30).
+# Updates: CMP, market cap (₹ Cr), 52W high/low, live P/E ratio.
+# Source:  yfinance fast_info (lightweight, ~2–5 min for 50 companies).
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    - cron: "30 10 * * 1-5"   # Mon–Fri  10:30 UTC  =  16:00 IST
+  workflow_dispatch:           # Allow one-click manual trigger from GitHub UI
+    inputs:
+      symbols:
+        description: "Space-separated NSE symbols to refresh (blank = all seeded)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run (no DB writes)"
+        type: boolean
+        default: false
+
+jobs:
+  refresh-prices:
+    name: Refresh prices
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run refresh_prices
+        run: |
+          ARGS=""
+          if [ -n "${{ github.event.inputs.symbols }}" ]; then
+            ARGS="--symbols ${{ github.event.inputs.symbols }}"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python -m scripts.refresh_prices --verbose $ARGS
