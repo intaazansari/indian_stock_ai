@@ -462,11 +462,17 @@ def _load_nifty500_csv() -> list[tuple[str, str, str]]:
 
 
 async def _already_seeded_symbols(session: AsyncSession) -> set[str]:
-    """Return NSE symbols that already have at least one key_ratio row."""
+    """Return NSE symbols that have at least 3 years of annual P&L data.
+
+    Using 3 years as the threshold ensures companies with only 1–2 rows
+    of sparse data are treated as incomplete and get re-seeded.
+    """
     result = await session.execute(
         select(Company.nse_symbol)
-        .join(KeyRatio, KeyRatio.company_id == Company.id)
-        .distinct()
+        .join(IncomeStatement, IncomeStatement.company_id == Company.id)
+        .where(IncomeStatement.period_type == "annual")
+        .group_by(Company.nse_symbol)
+        .having(sa_func.count(IncomeStatement.id) >= 3)
     )
     return {row[0] for row in result if row[0]}
 
