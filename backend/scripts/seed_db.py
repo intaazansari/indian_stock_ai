@@ -462,17 +462,18 @@ def _load_nifty500_csv() -> list[tuple[str, str, str]]:
 
 
 async def _already_seeded_symbols(session: AsyncSession) -> set[str]:
-    """Return NSE symbols that have at least 3 years of annual P&L data.
+    """Return NSE symbols that have 10+ years of annual P&L data.
 
-    Using 3 years as the threshold ensures companies with only 1–2 rows
-    of sparse data are treated as incomplete and get re-seeded.
+    10 years is the threshold because Screener.in provides up to 12 years.
+    Companies with only 1-5 years (yfinance-only) are considered incomplete
+    and will be re-seeded to get the full Screener.in history.
     """
     result = await session.execute(
         select(Company.nse_symbol)
         .join(IncomeStatement, IncomeStatement.company_id == Company.id)
         .where(IncomeStatement.period_type == "annual")
         .group_by(Company.nse_symbol)
-        .having(sa_func.count(IncomeStatement.id) >= 3)
+        .having(sa_func.count(IncomeStatement.id) >= 10)
     )
     return {row[0] for row in result if row[0]}
 
