@@ -71,7 +71,7 @@ export function MarketOverview() {
         <div className="flex items-center gap-3">
           {!market.isOpen && asOf && (
             <span className="text-xs text-gray-400 dark:text-gray-500">
-              as of {asOf}
+              Last {asOf}
             </span>
           )}
           <span className={cn(
