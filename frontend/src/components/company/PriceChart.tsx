@@ -98,9 +98,19 @@ export function PriceChart({ symbol }: PriceChartProps) {
     retry: 1,
   });
 
+  // Fetch live price so the displayed CMP matches the header (not stale last-close)
+  const { data: live } = useQuery({
+    queryKey: ["live-price", symbol],
+    queryFn: () => companiesApi.getLivePrice(symbol),
+    staleTime: 60_000,
+    retry: 1,
+  });
+
   const first = data?.[0]?.close ?? 0;
-  const last = data?.[data.length - 1]?.close ?? 0;
-  const change = last - first;
+  const lastHistorical = data?.[data.length - 1]?.close ?? 0;
+  // Use live CMP if available, otherwise fall back to last historical close
+  const currentCMP = live?.cmp ?? lastHistorical;
+  const change = first > 0 ? currentCMP - first : 0;
   const changePct = first > 0 ? (change / first) * 100 : 0;
   const isPositive = change >= 0;
 
@@ -131,7 +141,7 @@ export function PriceChart({ symbol }: PriceChartProps) {
           {!isLoading && data?.length && (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
               <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatPrice(last)}
+                {formatPrice(currentCMP)}
               </span>
               <span
                 className={`flex items-center gap-1 text-sm font-medium ${
@@ -139,8 +149,7 @@ export function PriceChart({ symbol }: PriceChartProps) {
                 }`}
               >
                 {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                {isPositive ? "+" : ""}
-                {formatPrice(change)} ({isPositive ? "+" : ""}{changePct.toFixed(2)}%)
+                {isPositive ? "+" : "-"}₹{Math.abs(change).toFixed(2)} ({isPositive ? "+" : ""}{changePct.toFixed(2)}%)
               </span>
               <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">
                 {PERIODS.find((p) => p.value === period)?.label}
@@ -255,7 +264,7 @@ export function PriceChart({ symbol }: PriceChartProps) {
                   <div
                     className="h-full bg-gradient-to-r from-red-400 to-emerald-500 rounded-full"
                     style={{
-                      width: `${Math.min(100, Math.max(0, ((last - week52Low) / (week52High - week52Low)) * 100))}%`,
+                      width: `${Math.min(100, Math.max(0, ((currentCMP - week52Low) / (week52High - week52Low)) * 100))}%`,
                     }}
                   />
                 </div>
