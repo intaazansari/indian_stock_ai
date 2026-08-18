@@ -6,9 +6,16 @@ Data sources used:
   - NSE symbol with .NS suffix for NSE-listed stocks
 
 Currency notes:
-  - yfinance returns all monetary values in INR (individual rupees)
-  - We convert to ₹ Crores by dividing by CRORE (10,000,000)
-  - All Decimal values stored are in ₹ Cr
+  - Most Indian companies report in INR; yfinance returns monetary values
+    in INR (individual rupees) and we divide by CRORE (10,000,000) → ₹ Cr.
+  - Some IT/export companies (Infosys, Wipro, HCL Tech, etc.) report
+    financial statements in USD. yfinance signals this via
+    ticker.info["financialCurrency"] = "USD".
+    In this case all monetary values are multiplied by the live USD/INR rate
+    AFTER the Cr conversion so that stored values are always in ₹ Crores.
+    EPS (per-share) values are also converted INR per share.
+  - Market cap from ticker.info["marketCap"] is always in the trading
+    currency (INR for NSE) so no FX conversion is applied to it.
 
 Limitations:
   - Promoter holding: yfinance 'heldPercentInsiders' is unreliable for India
@@ -130,6 +137,60 @@ def _fiscal_quarter(ts: pd.Timestamp) -> tuple[int, int]:
     return _fiscal_year(ts), q
 
 
+# ── Currency conversion helpers ───────────────────────────────────────────────
+
+# Some Indian companies (e.g. Infosys, Wipro, HCL Tech) report financial
+# statements in USD on yfinance even though their NSE price is in INR.
+# We detect this via ticker.info["financialCurrency"] and convert all
+# monetary values by the USD/INR rate before storing them as ₹ Crores.
+
+_usd_inr_rate_cache: float | None = None
+
+
+def _get_usd_inr_rate() -> float:
+    """Return the current USD/INR exchange rate with in-process caching."""
+    global _usd_inr_rate_cache
+    if _usd_inr_rate_cache is not None:
+        return _usd_inr_rate_cache
+    try:
+        rate = float(yf.Ticker("USDINR=X").fast_info.last_price)
+        if 70 < rate < 110:  # sanity check
+            _usd_inr_rate_cache = rate
+            logger.info("yfinance.usd_inr.fetched", rate=round(rate, 2))
+            return rate
+    except Exception:
+        pass
+    logger.warning("yfinance.usd_inr.fallback", rate=85.0)
+    return 85.0
+
+
+def _apply_currency_fx(rows: list[dict], fx: float) -> list[dict]:
+    """
+    Post-process financial rows: multiply all *_cr fields and per-share
+    (eps_basic, eps_diluted, dividend_per_share) by *fx* to convert from
+    foreign reporting currency (USD) to INR.
+
+    Works for both annual and quarterly rows.
+    Ratio/pct/growth fields are left untouched.
+    """
+    _per_share = {"eps_basic", "eps_diluted", "dividend_per_share"}
+    result: list[dict] = []
+    for row in rows:
+        new_row: dict = {}
+        for key, val in row.items():
+            if val is None:
+                new_row[key] = val
+            elif key.endswith("_cr") or key in _per_share:
+                try:
+                    new_row[key] = Decimal(str(round(float(val) * fx, 2)))
+                except (TypeError, ValueError, InvalidOperation):
+                    new_row[key] = val
+            else:
+                new_row[key] = val
+        result.append(new_row)
+    return result
+
+
 @dataclass
 class FetchResult:
     """Container for all data fetched for one company."""
@@ -202,6 +263,22 @@ class YFinanceFetcher:
             result.cash_flows = self._fetch_cash_flows(ticker, years)
             time.sleep(self.delay)
 
+            # ── Currency conversion (USD-reporting companies) ─────────────
+            # Some companies (Infosys, Wipro, HCL Tech, etc.) report financial
+            # statements in USD. Detect and convert all monetary values to INR.
+            fin_currency = result.company.get("financial_currency", "INR")
+            if fin_currency and fin_currency != "INR":
+                fx = _get_usd_inr_rate()
+                logger.info(
+                    "yfinance.currency.converting",
+                    symbol=ticker_symbol,
+                    from_currency=fin_currency,
+                    usd_inr=round(fx, 2),
+                )
+                result.income_statements = _apply_currency_fx(result.income_statements, fx)
+                result.balance_sheets    = _apply_currency_fx(result.balance_sheets,    fx)
+                result.cash_flows        = _apply_currency_fx(result.cash_flows,        fx)
+
             logger.info(
                 "yfinance.fetch.complete",
                 symbol=ticker_symbol,
@@ -252,6 +329,8 @@ class YFinanceFetcher:
             "headquarters": info.get("city"),
             "week52_high": _to_dec(info.get("fiftyTwoWeekHigh")),
             "week52_low":  _to_dec(info.get("fiftyTwoWeekLow")),
+            # financialCurrency may differ from trading currency (e.g. INFY.NS reports in USD)
+            "financial_currency": info.get("financialCurrency", "INR"),
         }
 
     def _fetch_income_statements(
@@ -459,6 +538,23 @@ class YFinanceFetcher:
 
             # Minimal company stub so FetchResult.success works
             result.company = {"name": nse_symbol, "nse_symbol": nse_symbol}
+
+            # ── Currency conversion (USD-reporting companies) ─────────────
+            try:
+                fin_currency = (ticker.info or {}).get("financialCurrency", "INR")
+            except Exception:
+                fin_currency = "INR"
+            if fin_currency and fin_currency != "INR":
+                fx = _get_usd_inr_rate()
+                logger.info(
+                    "yfinance.quarterly.currency.converting",
+                    symbol=ticker_symbol,
+                    from_currency=fin_currency,
+                    usd_inr=round(fx, 2),
+                )
+                result.income_statements = _apply_currency_fx(result.income_statements, fx)
+                result.balance_sheets    = _apply_currency_fx(result.balance_sheets,    fx)
+                result.cash_flows        = _apply_currency_fx(result.cash_flows,        fx)
 
             logger.info(
                 "yfinance.quarterly.complete",
