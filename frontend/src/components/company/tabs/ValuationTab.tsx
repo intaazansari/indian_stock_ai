@@ -96,7 +96,8 @@ export function ValuationTab({ symbol }: { symbol: string }) {
                 </p>
                 {data.upside_downside_pct != null && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {data.upside_downside_pct > 0 ? "+" : ""}{formatNumber(data.upside_downside_pct)}% upside to fair value
+                    {data.upside_downside_pct > 0 ? "+" : ""}{formatNumber(data.upside_downside_pct)}%{" "}
+                    {data.upside_downside_pct >= 0 ? "upside" : "downside"} to fair value
                   </p>
                 )}
               </div>
