@@ -101,10 +101,13 @@ class Settings(BaseSettings):
         """
         Render (and some other providers) give a plain postgresql:// URL.
         SQLAlchemy asyncpg driver requires postgresql+asyncpg://.
-        Auto-fix it here so no manual editing is needed.
+        Also replace sslmode=require (psycopg2 param) with ssl=require (asyncpg param).
+        Auto-fix here so no manual editing is needed.
         """
         if isinstance(v, str) and v.startswith("postgresql://"):
-            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if isinstance(v, str):
+            v = v.replace("sslmode=require", "ssl=require")
         return v
 
     @model_validator(mode="after")

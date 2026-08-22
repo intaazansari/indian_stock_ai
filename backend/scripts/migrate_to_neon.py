@@ -92,7 +92,7 @@ async def copy_table(src: AsyncConnection, tgt: AsyncConnection, table: str) -> 
     col_list = ", ".join(f'"{c}"' for c in cols)
     placeholders = ", ".join(f":{c}" for c in cols)
 
-    # Truncate target first (safe re-run)
+    # Truncate target first (safe re-run) — inside caller's transaction
     await tgt.execute(text(f'TRUNCATE TABLE {table} CASCADE'))
 
     # Copy in batches
@@ -112,15 +112,12 @@ async def copy_table(src: AsyncConnection, tgt: AsyncConnection, table: str) -> 
         copied += len(rows)
         offset += BATCH_SIZE
 
-    await tgt.commit()
     return src_count, copied
 
 
 async def main() -> None:
     if not TARGET_DB:
         print("ERROR: Set TARGET_DB env var to your Neon asyncpg connection string.")
-        print("  Example:")
-        print("  $env:TARGET_DB='postgresql+asyncpg://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require'")
         sys.exit(1)
 
     # Step 1: Create schema on Neon
@@ -134,16 +131,19 @@ async def main() -> None:
     print("  " + "-" * 54)
 
     total_src = total_copied = 0
-    async with src_engine.connect() as src, tgt_engine.begin() as tgt:
-        for table in TABLES:
-            try:
-                sc, cc = await copy_table(src, tgt, table)
-                status = "✓" if sc == cc else f"MISMATCH (src={sc}, copied={cc})"
-                print(f"  {table:<28} {sc:>8,}  {cc:>8,}  {status}")
-                total_src += sc
-                total_copied += cc
-            except Exception as e:
-                print(f"  {table:<28} {'':>8}  {'':>8}  SKIP ({type(e).__name__}: {e})")
+    async with src_engine.connect() as src:
+        async with tgt_engine.connect() as tgt:
+            for table in TABLES:
+                try:
+                    # Each table gets its own transaction so a failure doesn't block others
+                    async with tgt.begin():
+                        sc, cc = await copy_table(src, tgt, table)
+                    status = "✓" if sc == cc else f"MISMATCH (src={sc}, copied={cc})"
+                    print(f"  {table:<28} {sc:>8,}  {cc:>8,}  {status}")
+                    total_src += sc
+                    total_copied += cc
+                except Exception as e:
+                    print(f"  {table:<28} {'':>8}  {'':>8}  SKIP ({type(e).__name__}: {e})")
 
     print(f"\n  Total: {total_src:,} source rows → {total_copied:,} copied")
 
