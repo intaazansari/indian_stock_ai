@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   // Enable React strict mode for better debugging
   reactStrictMode: true,
 
-  // Required for Docker production builds (copies only necessary files)
-  output: "standalone",
+  // standalone output only for Docker — Vercel uses its own optimised output
+  ...(process.env.DOCKER_BUILD === "true" ? { output: "standalone" } : {}),
 
   // Image optimisation — allow BSE/NSE logo domains
   images: {
