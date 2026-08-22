@@ -16,8 +16,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from fastapi import Depends
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
+from app.core.dependencies import get_db
 from app.core.exceptions import ApplicationError
 from app.core.logging import setup_logging
 from app.core.middleware import RateLimitMiddleware, RequestLoggingMiddleware
@@ -92,5 +97,7 @@ app = create_application()
 
 
 @app.get("/health", tags=["Infrastructure"])
-async def health_check() -> dict[str, str]:
+async def health_check(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
+    """Ping the DB so Neon compute stays warm between UptimeRobot checks."""
+    await db.execute(text("SELECT 1"))
     return {"status": "healthy", "version": settings.APP_VERSION}
