@@ -98,6 +98,10 @@ app = create_application()
 
 @app.get("/health", tags=["Infrastructure"])
 async def health_check(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
-    """Ping the DB so Neon compute stays warm between UptimeRobot checks."""
-    await db.execute(text("SELECT 1"))
-    return {"status": "healthy", "version": settings.APP_VERSION}
+    """Ping the DB to keep Neon warm. DB failure is non-fatal — backend stays 'healthy'."""
+    db_status = "ok"
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "warming_up"  # Neon cold start — don't fail the health check
+    return {"status": "healthy", "version": settings.APP_VERSION, "db": db_status}

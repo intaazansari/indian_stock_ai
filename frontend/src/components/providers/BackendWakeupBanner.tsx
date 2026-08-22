@@ -19,7 +19,7 @@ import axios from "axios";
 
 async function pingHealth() {
   // /health is proxied by Next.js rewrite to the backend — same origin, no CORS.
-  const { data } = await axios.get("/health", { timeout: 8_000 });
+  const { data } = await axios.get("/health", { timeout: 20_000 });
   return data as { status: string };
 }
 
