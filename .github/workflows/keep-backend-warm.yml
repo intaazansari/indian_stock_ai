@@ -1,0 +1,36 @@
+name: Keep Backend Warm
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pings the Render backend /health endpoint every 14 minutes to prevent the
+# free tier from spinning down (spin-down threshold: 15 min idle).
+#
+# Active window: 06:00–02:00 IST = 00:30–20:30 UTC  (20 hours/day, every day)
+# Sleep window:  02:00–06:00 IST = 20:30–00:30 UTC  (4 hours/day — saves
+#                4 hrs × 30 days = 120 hrs/month, keeping total ~600/750)
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    # Every 14 min, all week, between 00:00 and 20:59 UTC (06:00–02:00 IST)
+    - cron: "*/14 0-20 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping:
+    name: Ping /health
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Ping backend health endpoint
+        run: |
+          echo "Pinging backend at $BACKEND_URL/health ..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 60 \
+            "$BACKEND_URL/health")
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Warning: health check returned $STATUS (backend may be cold-starting)"
+          fi
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL || 'https://isa-backend-bpbt.onrender.com' }}

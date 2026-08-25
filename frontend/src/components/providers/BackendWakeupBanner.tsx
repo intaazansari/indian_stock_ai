@@ -26,6 +26,8 @@ async function pingHealth() {
 export function BackendWakeupBanner() {
   const queryClient = useQueryClient();
   const wasDownRef = useRef(false);
+  // Only show the banner after 2 consecutive failures to avoid blips.
+  const FAILURE_THRESHOLD = 2;
 
   const { isError, isSuccess, isFetching, failureCount } = useQuery({
     queryKey: ["__backend_health__"],
@@ -33,20 +35,21 @@ export function BackendWakeupBanner() {
     // Poll every 10 s while the backend is unreachable; stop when healthy.
     refetchInterval: (query) =>
       query.state.status === "error" ? 10_000 : false,
-    // Don't retry — if health fails once we already know it's down.
-    retry: false,
+    // Retry once before declaring the backend truly down.
+    retry: 1,
+    retryDelay: 5_000,
     // Always treat as stale so it refetches on window focus too.
     staleTime: 0,
     gcTime: 0,
     refetchOnWindowFocus: true,
   });
 
-  // Track whether we have ever seen a failure in this session.
+  // Track whether we have ever seen confirmed failures in this session.
   useEffect(() => {
-    if (isError || failureCount > 0) {
+    if (failureCount >= FAILURE_THRESHOLD) {
       wasDownRef.current = true;
     }
-  }, [isError, failureCount]);
+  }, [failureCount]);
 
   // When backend comes back online, invalidate everything so components reload.
   useEffect(() => {
@@ -59,7 +62,8 @@ export function BackendWakeupBanner() {
     }
   }, [isSuccess, isFetching, queryClient]);
 
-  if (!isError) return null;
+  // Only show after confirmed sustained failure (not a single transient blip).
+  if (!isError || failureCount < FAILURE_THRESHOLD) return null;
 
   return (
     <div className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-center gap-2.5 bg-amber-50 dark:bg-amber-950 border-b border-amber-200 dark:border-amber-800 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-200 shadow-sm">
