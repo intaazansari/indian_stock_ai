@@ -35,7 +35,10 @@ langgraph>=0.2.56
 langchain-core>=0.3.29
 
 # ─── Vector Database ──────────────────────────────────────────────────────────
-qdrant-client[fastembed]==1.12.1
+# fastembed extra removed: it requires numpy<2 which conflicts with Python 3.13.
+# Qdrant is disabled in production (QDRANT_URL="") and not needed for local dev.
+# Re-add qdrant-client[fastembed] only if RAG/PDF features are activated.
+qdrant-client==1.12.1
 
 # ─── HTTP Client ──────────────────────────────────────────────────────────────
 httpx==0.28.0
