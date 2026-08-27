@@ -99,15 +99,24 @@ class Settings(BaseSettings):
     @classmethod
     def fix_database_url(cls, v: str) -> str:
         """
-        Render (and some other providers) give a plain postgresql:// URL.
-        SQLAlchemy asyncpg driver requires postgresql+asyncpg://.
-        Also replace sslmode=require (psycopg2 param) with ssl=require (asyncpg param).
-        Auto-fix here so no manual editing is needed.
+        Normalise the DATABASE_URL for asyncpg compatibility.
+
+        Handles URLs from Neon, Render, and other providers:
+          - postgresql://   → postgresql+asyncpg://
+          - sslmode=require → ssl=require  (psycopg2 param → asyncpg param)
+          - channel_binding=require → stripped (Neon-specific, not supported by asyncpg)
         """
-        if isinstance(v, str) and v.startswith("postgresql://"):
+        if not isinstance(v, str):
+            return v
+        if v.startswith("postgresql://"):
             v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
-        if isinstance(v, str):
-            v = v.replace("sslmode=require", "ssl=require")
+        v = v.replace("sslmode=require", "ssl=require")
+        # Strip channel_binding — Neon adds it but asyncpg does not support it
+        import re
+        v = re.sub(r"[&?]channel_binding=[^&]*", "", v)
+        # Clean up any trailing ? or & left after removal
+        v = re.sub(r"\?&", "?", v)
+        v = re.sub(r"[?&]$", "", v)
         return v
 
     @model_validator(mode="after")
