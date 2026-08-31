@@ -160,7 +160,7 @@ pip install -r requirements.txt
 
 ```powershell
 # Still in backend/ folder
-Copy-Item ..\env.example .env      # Windows PowerShell
+Copy-Item ..\.env.example .env      # Windows PowerShell
 # cp ../.env.example .env          # macOS / Linux
 ```
 
