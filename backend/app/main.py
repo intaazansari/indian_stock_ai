@@ -14,6 +14,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 from fastapi import Depends
@@ -76,6 +77,9 @@ def create_application() -> FastAPI:
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
         expose_headers=["X-Request-ID"],
     )
+
+    # ── GZip compression — reduces payload size for screener/analysis responses
+    application.add_middleware(GZipMiddleware, minimum_size=1024)
 
     # ── Custom middleware ──────────────────────────────────────────────────────
     application.add_middleware(RequestLoggingMiddleware)

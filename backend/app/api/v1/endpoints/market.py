@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import math
 from datetime import datetime, time as dt_time
 from time import time
@@ -11,14 +12,18 @@ from zoneinfo import ZoneInfo
 import yfinance as yf
 from fastapi import APIRouter
 
+from app.core.dependencies import RedisClient
+
 router = APIRouter()
 
 _IST = ZoneInfo("Asia/Kolkata")
 
-# Simple in-process cache: (data, fetched_at)
+# In-process fallback cache: (data, fetched_at)
 _cache: dict[str, Any] = {}
 _CACHE_TTL_OPEN   =    60  # seconds — live during trading hours
 _CACHE_TTL_CLOSED = 4 * 3600  # 4 h — data doesn't change when market is closed
+
+_REDIS_KEY = "market:indices"
 
 
 def _is_market_open() -> bool:
@@ -97,10 +102,21 @@ def _fetch_all_indices() -> list[dict]:
 
 
 @router.get("/indices", tags=["Market"])
-async def get_market_indices() -> list[dict]:
+async def get_market_indices(redis: RedisClient) -> list[dict]:
     global _cache
     now = time()
     ttl = _CACHE_TTL_OPEN if _is_market_open() else _CACHE_TTL_CLOSED
+
+    # 1. Try Redis (survives cold starts)
+    if redis is not None:
+        try:
+            cached_raw = await redis.get(_REDIS_KEY)
+            if cached_raw:
+                return json.loads(cached_raw)
+        except Exception:
+            pass
+
+    # 2. In-process fallback
     if "data" in _cache and now - _cache.get("ts", 0) < ttl:
         return _cache["data"]
 
@@ -112,4 +128,9 @@ async def get_market_indices() -> list[dict]:
     out = [{**idx, "as_of": as_of} for idx in indices]
 
     _cache = {"data": out, "ts": now}
+    if redis is not None:
+        try:
+            await redis.setex(_REDIS_KEY, ttl, json.dumps(out))
+        except Exception:
+            pass
     return out
