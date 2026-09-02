@@ -309,7 +309,7 @@ The Render free web service can spin down after inactivity and has a 750-hour mo
 
 Together these jobs keep the backend warm for approximately 20 hours/day, or about 600 Render hours/month, leaving approximately 150 hours of monthly headroom. Check each job's **History** in cron-job.org and verify successful HTTP 200 responses every 10 minutes during its active window.
 
-The GitHub Actions workflow [`keep-backend-warm.yml`](.github/workflows/keep-backend-warm.yml) remains available for manual fallback/testing; it is not the primary production scheduler.
+The GitHub Actions workflow [`keep-backend-warm.yml`](.github/workflows/keep-backend-warm.yml) remains enabled for manual wake-up and health checks. Run it from **GitHub → Actions → Keep Backend Warm → Run workflow** when needed; it has no automatic schedule and is not the primary production scheduler.
 
 ---
 

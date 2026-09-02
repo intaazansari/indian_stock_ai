@@ -1,25 +1,16 @@
 name: Keep Backend Warm
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Pings the Render backend /health endpoint every 10 minutes to prevent the
-# free tier from spinning down (spin-down threshold: 15 min idle).
-# Using 10-min interval instead of 14 to guard against GitHub Actions scheduler
-# delays of up to 5 min — keeps us well inside the 15-min threshold.
+# Manually pings the Render backend /health endpoint when needed.
+# Production warm-up is handled by cron-job.org to preserve Render's
+# 750-hour monthly free-tier budget.
 #
-# Active window: 06:00–02:00 IST = 00:30–20:30 UTC  (20 hours/day, every day)
-# Sleep window:  02:00–06:00 IST = 20:30–00:30 UTC  (4 hours/day — saves
-#                4 hrs × 30 days = 120 hrs/month, keeping total ~600/750)
-#
-# Note: BACKEND_URL secret must be set in repo Settings → Secrets.
-#       Fallback hardcoded URL is used if the secret is missing.
+# Use GitHub Actions → Keep Backend Warm → Run workflow for an on-demand
+# wake-up or health check. BACKEND_URL may be configured as a repository
+# secret; the fallback URL is used when it is not set.
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
-  schedule:
-    # Every 10 min, all week, between 00:00 and 20:59 UTC (06:00–02:00 IST).
-    # Using 10-min interval (not 14) to guard against GitHub Actions scheduler
-    # delays of up to 5 min — keeps us well inside the 15-min Render spin-down.
-    - cron: "*/10 0-20 * * *"
   workflow_dispatch: # Allow manual trigger
 
 jobs:

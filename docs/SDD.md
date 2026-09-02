@@ -124,6 +124,7 @@ ValuePilotage is an AI-powered equity research platform for NSE-listed Indian co
 │   quarterly-financials.yml    (4× per year)         │
 │   cron-job.org warm-up        (every 10 min,        │
 │                                06:00–02:00 IST)     │
+│   GitHub Actions warm-up      (manual fallback)     │
 └─────────────────────────────────────────────────────┘
           │
           ▼ GROQ API (LLM)
@@ -648,6 +649,8 @@ sequenceDiagram
     end
 
     Note over Cron,Render: Two jobs cover 06:00–02:00 IST<br/>Sleep window 02:00–06:00 IST saves 4 hrs/day<br/>Monthly: 20h × 30d = 600h used / 750h limit ✅<br/>Buffer: 150 hrs remaining
+
+    Note over Render: GitHub Actions keep-backend-warm.yml remains available<br/>for manual wake-up or health checks only; no automatic schedule
 ```
 
 ---
