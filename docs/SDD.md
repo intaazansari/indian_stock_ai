@@ -122,7 +122,7 @@ ValuePilotage is an AI-powered equity research platform for NSE-listed Indian co
 │   daily-price-refresh.yml     (Mon–Fri 16:00 IST)   │
 │   weekly-holdings-refresh.yml (Sunday  23:30 IST)   │
 │   quarterly-financials.yml    (4× per year)         │
-│   keep-backend-warm.yml       (every 14 min,        │
+│   cron-job.org warm-up        (every 10 min,        │
 │                                06:00–02:00 IST)     │
 └─────────────────────────────────────────────────────┘
           │
@@ -167,7 +167,7 @@ ValuePilotage is an AI-powered equity research platform for NSE-listed Indian co
 | `daily-price-refresh` | Mon–Fri 16:00 IST | yfinance `fast_info` → updates CMP, market cap, 52W H/L |
 | `weekly-holdings-refresh` | Sunday 23:30 IST | Screener.in scrape → updates promoter/FII/DII % |
 | `quarterly-financials` | Manual + 4 dates/year | Screener.in full scrape → P&L, BS, CF, Key Ratios |
-| `keep-backend-warm` | Every 14 min (06:00–02:00 IST) | `curl /health` → prevents Render 15-min spin-down |
+| `keep-backend-warm` | cron-job.org, every 10 min (06:00–02:00 IST) | `GET /health` → prevents Render 15-min spin-down |
 
 ---
 
@@ -227,7 +227,7 @@ sequenceDiagram
     App->>App: Check QDRANT_URL (empty → skip)
     App->>App: Server ready on :8000
 
-    Note over App: GitHub Actions pings every 14 min
+    Note over App: cron-job.org pings every 10 min during the active window
 
     Render->>App: GET /health
     App->>DB: SELECT 1
@@ -628,30 +628,26 @@ sequenceDiagram
 
 ---
 
-### 5.13 Keep-Backend-Warm Cron
+### 5.13 Keep-Backend-Warm Cron (cron-job.org)
 
 ```mermaid
 sequenceDiagram
-    participant GH as GitHub Scheduler
-    participant VM as GitHub Actions VM
+    participant Cron as cron-job.org
     participant Render as Render Backend
 
-    Note over GH: Every 14 min, 00:00–20:59 UTC<br/>(06:00–02:00 IST) 7 days/week
+    Note over Cron: Asia/Kolkata timezone<br/>Every 10 min, 06:00–02:00 IST
 
-    GH->>VM: Trigger keep-backend-warm.yml
-    VM->>Render: GET /health (--max-time 60s)
+    Cron->>Render: GET /health
 
     alt Backend awake (normal case)
-        Render-->>VM: 200 {"status":"healthy"}
-        VM-->>GH: ✓ HTTP 200 logged
+        Render-->>Cron: 200 {"status":"healthy"}
         Note over Render: 15-min idle timer RESET ✓
     else Backend was cold (after 02:00–06:00 IST sleep window)
         Note over Render: Render wakes container (~30–90s)
-        Render-->>VM: 200 {"status":"healthy"}
-        VM-->>GH: ✓ HTTP 200 (may be slow but succeeds)
+        Render-->>Cron: 200 {"status":"healthy"}
     end
 
-    Note over GH,Render: Sleep window 20:30–00:30 UTC saves 4 hrs/day<br/>Monthly: 20h × 30d = 600h used / 750h limit ✅<br/>Buffer: 150 hrs remaining
+    Note over Cron,Render: Two jobs cover 06:00–02:00 IST<br/>Sleep window 02:00–06:00 IST saves 4 hrs/day<br/>Monthly: 20h × 30d = 600h used / 750h limit ✅<br/>Buffer: 150 hrs remaining
 ```
 
 ---
@@ -772,7 +768,7 @@ Service          Platform    Cost    Notes
 ───────────────────────────────────────────────────────
 isa-backend      Render      Free    750 hr/month shared
 isa-redis        Render      Free    Valkey 8, 25MB — no instance hours
-Neon DB          Neon        Free    0.5GB storage, serverless compute
+Neon DB          Neon        Free    Separate serverless PostgreSQL; not subject to Render DB expiry
 Frontend         Vercel      Free    Unlimited deployments
 Data Pipeline    GitHub      Free    Actions 2000 min/month
 Groq LLM         Groq        PAYG    Only on cache miss
@@ -782,6 +778,9 @@ RENDER HOUR BUDGET (September)
 Backend awake:  20 hrs/day × 30 days = 600 hrs ✅
 Sleep window:   02:00–06:00 IST (4 hrs off daily)
 Buffer:         150 hrs remaining from 750hr limit
+
+Database note: Production PostgreSQL is hosted on Neon. The Render-managed
+PostgreSQL service is not used and must not be provisioned for production.
 ```
 
 ---
