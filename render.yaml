@@ -1,14 +1,18 @@
 # render.yaml — Render.com Infrastructure as Code
 #
-# This file defines ALL services for the Indian Stock AI platform.
+# This file defines the backend-only services for the Indian Stock AI platform.
 # Commit this file and Render will detect and provision everything automatically.
 #
 # Render services:
 #   isa-backend       → FastAPI  (Web Service, Docker)
 #   isa-celery-worker → Celery   (Background Worker, Docker)
-#   isa-frontend      → Next.js  (Web Service, Docker)
 #   isa-redis         → Redis    (Managed)
 #   Neon PostgreSQL   → external database configured via DATABASE_URL
+#
+# The frontend is NOT deployed via Render. It is deployed on Vercel
+# (native `next build`, no Docker) — see README.md and docs/SDD.md §7.
+# `infrastructure/docker/frontend.Dockerfile` is kept only for local
+# `docker-compose` development, not for Render deployment.
 #
 # Qdrant: Render has no managed Qdrant.
 #   Option A (recommended): Qdrant Cloud free tier → https://cloud.qdrant.io
@@ -82,9 +86,10 @@ services:
         value: text-embedding-3-small
 
       # ── CORS / Hosts — SET IN DASHBOARD after frontend URL is known ────────
-      # Example: CORS_ORIGINS=["https://isa-frontend.onrender.com"]
+      # Frontend origin is the Vercel production domain (valuepilotage.com),
+      # not a Render URL — the frontend is not deployed on Render.
       - key: CORS_ORIGINS
-        value: '["https://valuepilotage.com","https://www.valuepilotage.com","https://isa-frontend-otyp.onrender.com","http://localhost:3000"]'
+        value: '["https://valuepilotage.com","https://www.valuepilotage.com","http://localhost:3000"]'
       # Example: ALLOWED_HOSTS=["isa-backend.onrender.com"]
       - key: ALLOWED_HOSTS
         value: '["isa-backend-bpbt.onrender.com","localhost","127.0.0.1"]'
@@ -142,23 +147,6 @@ services:
         value: openai/gpt-oss-120b
       - key: QDRANT_URL
         value: ""
-
-  # ── Next.js Frontend ─────────────────────────────────────────────────────────
-  - type: web
-    name: isa-frontend
-    runtime: docker
-    dockerfilePath: ./infrastructure/docker/frontend.Dockerfile
-    dockerContext: ./frontend
-    plan: free
-    autoDeploy: true
-
-    envVars:
-      # NEXT_PUBLIC_API_URL must be the full backend URL
-      # After first deploy, update this to: https://isa-backend.onrender.com
-      - key: NEXT_PUBLIC_API_URL
-        value: https://isa-backend-bpbt.onrender.com
-      - key: NEXT_PUBLIC_APP_NAME
-        value: "ValuePilotage"
 
   # ── Redis ────────────────────────────────────────────────────────────────────
   - type: redis
