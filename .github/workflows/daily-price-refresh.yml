@@ -3,6 +3,10 @@ name: Daily Price Refresh
 # ─────────────────────────────────────────────────────────────────────────────
 # Runs every weekday at 16:00 IST (10:30 UTC) — 30 min after NSE close (15:30).
 # Updates: CMP, market cap (₹ Cr), 52W high/low, live P/E ratio.
+# Also computes & stores the day's Top 15 Gainers/Losers in `market_movers`
+# (surfaced on the Dashboard via GET /api/v1/market/movers).
+# NSE holidays (see backend/app/core/nse_holidays.py) are skipped automatically
+# by the script itself — this cron intentionally still fires every weekday.
 # Source:  yfinance fast_info (lightweight, ~2–5 min for 50 companies).
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -17,6 +21,10 @@ on:
         default: ""
       dry_run:
         description: "Dry run (no DB writes)"
+        type: boolean
+        default: false
+      force:
+        description: "Force run even on a weekend/NSE holiday (e.g. manual test)"
         type: boolean
         default: false
 
@@ -56,5 +64,8 @@ jobs:
           fi
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             ARGS="$ARGS --dry-run"
+          fi
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
           fi
           python -m scripts.refresh_prices --verbose $ARGS

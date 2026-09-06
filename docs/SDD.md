@@ -552,20 +552,30 @@ sequenceDiagram
 
     GH->>VM: Trigger daily-price-refresh.yml
     VM->>VM: checkout + setup Python 3.13 + pip install
+    VM->>VM: Check today (IST) against app.core.nse_holidays<br/>Skip entirely if weekend or declared NSE holiday
     VM->>DB: Connect via DATABASE_URL secret (asyncpg direct)
     VM->>DB: SELECT nse_symbol FROM companies
 
     loop For each NSE symbol (~50 companies, ~2–5 min total)
         VM->>YF: yf.Ticker("{symbol}.NS").fast_info
-        YF-->>VM: {last_price, market_cap, year_high, year_low}
+        YF-->>VM: {last_price, previous_close, market_cap, year_high, year_low}
+        VM->>VM: change_pct = (last_price - previous_close) / previous_close * 100
         VM->>DB: UPDATE companies SET<br/>cmp=?, market_cap_cr=?, week52_high=?, week52_low=?<br/>WHERE nse_symbol=?
     end
+
+    VM->>VM: Rank all symbols by change_pct (desc → gainers, asc → losers)
+    VM->>DB: DELETE FROM market_movers WHERE date = today
+    VM->>DB: INSERT top 15 gainers + top 15 losers into market_movers<br/>(date, symbol, company, close, previous_close, change_pct, type, rank)
 
     VM->>DB: COMMIT
     VM-->>GH: Workflow complete ✓
 
     Note over VM,DB: Render backend NEVER involved.<br/>Direct GitHub VM → Neon connection.<br/>Zero Render hours consumed.
 ```
+
+The FastAPI backend exposes `GET /api/v1/market/movers?limit=10`, which reads the most
+recent `market_movers` date and returns the top gainers/losers for the Dashboard's
+"Top Gainers & Losers" section.
 
 ---
 

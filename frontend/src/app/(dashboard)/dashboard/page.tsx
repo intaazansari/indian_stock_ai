@@ -1,4 +1,5 @@
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
+import { TopMovers } from "@/components/dashboard/TopMovers";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -42,6 +43,9 @@ export default function DashboardHomePage() {
           ))}
         </div>
       </section>
+
+      {/* ── Top Gainers / Losers ─────────────────────────────────────────── */}
+      <TopMovers limit={10} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ from app.models.company import Company
 from app.models.financials import IncomeStatement, BalanceSheet, CashFlow, KeyRatio
 from app.models.analysis_cache import AnalysisCache
 from app.models.watchlist import Watchlist, Portfolio
+from app.models.market_mover import MarketMover
 
 __all__ = [
     "User",
@@ -17,4 +18,5 @@ __all__ = [
     "AnalysisCache",
     "Watchlist",
     "Portfolio",
+    "MarketMover",
 ]

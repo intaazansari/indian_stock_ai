@@ -10,9 +10,12 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import yfinance as yf
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
+from sqlalchemy import func, select
 
-from app.core.dependencies import RedisClient
+from app.core.dependencies import DBSession, RedisClient
+from app.models.market_mover import MarketMover
+from app.schemas.market import MarketMoversResponse, MarketMoverItem
 
 router = APIRouter()
 
@@ -134,3 +137,37 @@ async def get_market_indices(redis: RedisClient) -> list[dict]:
         except Exception:
             pass
     return out
+
+
+@router.get("/movers", response_model=MarketMoversResponse, tags=["Market"])
+async def get_market_movers(
+    db: DBSession,
+    limit: int = Query(default=10, ge=1, le=50),
+) -> MarketMoversResponse:
+    """
+    Top Gainers / Losers for the most recent trading day we have data for.
+
+    Rows are populated once per trading day by `scripts/refresh_prices.py`
+    (Mon-Fri after NSE close; NSE holidays are skipped automatically).
+    """
+    latest_date = (
+        await db.execute(select(func.max(MarketMover.date)))
+    ).scalar_one_or_none()
+
+    if latest_date is None:
+        return MarketMoversResponse(date=None, gainers=[], losers=[])
+
+    async def _fetch(mover_type: str) -> list[MarketMoverItem]:
+        stmt = (
+            select(MarketMover)
+            .where(MarketMover.date == latest_date, MarketMover.type == mover_type)
+            .order_by(MarketMover.rank.asc())
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return [MarketMoverItem.model_validate(row) for row in result.scalars().all()]
+
+    gainers = await _fetch("gainer")
+    losers = await _fetch("loser")
+
+    return MarketMoversResponse(date=latest_date, gainers=gainers, losers=losers)
