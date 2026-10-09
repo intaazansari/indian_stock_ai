@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: "/screener",  label: "Screener"  },
   { href: "/watchlist", label: "Watchlist" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/about",     label: "About"     },
 ];
 
 export default function LandingPage() {
@@ -121,6 +122,16 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-gray-100 dark:border-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <p>© {new Date().getFullYear()} ValuePilotage. Not investment advice.</p>
+          <Link href="/about" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+            About ValuePilotage &amp; its creator
+          </Link>
+        </div>
+      </footer>
 
       {/* Bottom nav — mobile only, same as dashboard */}
       <MobileNav />

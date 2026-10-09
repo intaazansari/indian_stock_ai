@@ -11,6 +11,7 @@ import {
   Brain,
   Settings,
   Home,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -21,6 +22,11 @@ const NAV_ITEMS = [
   { href: "/screener",  icon: Search,          label: "Screener"  },
   { href: "/watchlist", icon: BookMarked,      label: "Watchlist" },
   { href: "/portfolio", icon: TrendingUp,      label: "Portfolio" },
+];
+
+const FOOTER_ITEMS = [
+  { href: "/about",    icon: Info,     label: "About"    },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export function Sidebar() {
@@ -63,14 +69,22 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-2 pb-4">
-        <Link
-          href="/settings"
-          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white transition-colors"
-        >
-          <Settings className="w-4 h-4" />
-          Settings
-        </Link>
+      <div className="px-2 pb-4 space-y-0.5">
+        {FOOTER_ITEMS.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
+              pathname === item.href
+                ? "bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white font-medium"
+                : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-white"
+            )}
+          >
+            <item.icon className="w-4 h-4" />
+            {item.label}
+          </Link>
+        ))}
       </div>
     </aside>
   );
