@@ -293,7 +293,7 @@ Each agent has **one responsibility** and a **defined output schema**.
 | `daily-price-refresh` | Mon–Fri 16:00 IST | yfinance → CMP, market cap, 52W H/L |
 | `weekly-holdings-refresh` | Sunday 23:30 IST | Screener.in → promoter/FII/DII % |
 | `quarterly-financials` | Manual + 4×/year | Full P&L, BS, CF, Key Ratios |
-| `keep-backend-warm` | cron-job.org, every 10 min (06:00–02:00 IST) | Prevents Render free tier spin-down |
+| `keep-backend-warm` | cron-job.org, every 10 min (24/7) | Prevents Render free tier spin-down |
 
 > All data pipeline workflows connect **directly to Neon DB** — Render backend is not involved and consumes zero Render hours.
 
@@ -301,13 +301,14 @@ Each agent has **one responsibility** and a **defined output schema**.
 
 The Render free web service can spin down after inactivity and has a 750-hour monthly limit. The production warm-up job is configured in [cron-job.org](https://cron-job.org), not GitHub Actions:
 
-- **Job 1:** `*/10 6-23 * * *` — runs every 10 minutes from 06:00 through 23:59
-- **Job 2:** `*/10 0-1 * * *` — runs every 10 minutes from 00:00 through 01:59
+- **Job:** `*/10 * * * *` — runs every 10 minutes, 24/7 (no sleep window)
 - **Timezone:** `Asia/Kolkata`
 - **URL:** `https://isa-backend-bpbt.onrender.com/health`
-- **Sleep window:** 02:00–05:59 IST, allowing the backend to spin down
+- **Request timeout:** 30 seconds (cron-job.org maximum)
 
-Together these jobs keep the backend warm for approximately 20 hours/day, or about 600 Render hours/month, leaving approximately 150 hours of monthly headroom. Check each job's **History** in cron-job.org and verify successful HTTP 200 responses every 10 minutes during its active window.
+`isa-backend` is the only free Render web service, so running 24/7 uses at most 31 × 24 = 744 of the 750 free hours per month. **Do not add a nightly sleep window.** A cold start on the free tier takes about 60–90 seconds. That's longer than cron-job.org's 30-second timeout, so every ping after a sleep window fails. After about 25 consecutive failures, cron-job.org disables the job automatically. If you add another free Render web service, the shared 750-hour budget no longer fits 24/7 uptime.
+
+Check the job's **History** in cron-job.org and verify successful HTTP 200 responses every 10 minutes. `/health` always returns 200 once the API process is up, even if Neon is cold (`"db": "warming_up"`). So a 503 means the Render instance itself is down or restarting. Check **Render → isa-backend → Events/Logs** for out-of-memory or exit errors.
 
 The GitHub Actions workflow [`keep-backend-warm.yml`](.github/workflows/keep-backend-warm.yml) remains enabled for manual wake-up and health checks. Run it from **GitHub → Actions → Keep Backend Warm → Run workflow** when needed; it has no automatic schedule and is not the primary production scheduler.
 

@@ -122,8 +122,7 @@ ValuePilotage is an AI-powered equity research platform for NSE-listed Indian co
 │   daily-price-refresh.yml     (Mon–Fri 16:00 IST)   │
 │   weekly-holdings-refresh.yml (Sunday  23:30 IST)   │
 │   quarterly-financials.yml    (4× per year)         │
-│   cron-job.org warm-up        (every 10 min,        │
-│                                06:00–02:00 IST)     │
+│   cron-job.org warm-up        (every 10 min, 24/7)  │
 │   GitHub Actions warm-up      (manual fallback)     │
 └─────────────────────────────────────────────────────┘
           │
@@ -168,7 +167,7 @@ ValuePilotage is an AI-powered equity research platform for NSE-listed Indian co
 | `daily-price-refresh` | Mon–Fri 16:00 IST | yfinance `fast_info` → updates CMP, market cap, 52W H/L |
 | `weekly-holdings-refresh` | Sunday 23:30 IST | Screener.in scrape → updates promoter/FII/DII % |
 | `quarterly-financials` | Manual + 4 dates/year | Screener.in full scrape → P&L, BS, CF, Key Ratios |
-| `keep-backend-warm` | cron-job.org, every 10 min (06:00–02:00 IST) | `GET /health` → prevents Render 15-min spin-down |
+| `keep-backend-warm` | cron-job.org, every 10 min (24/7) | `GET /health` → prevents Render 15-min spin-down |
 
 ---
 
@@ -228,7 +227,7 @@ sequenceDiagram
     App->>App: Check QDRANT_URL (empty → skip)
     App->>App: Server ready on :8000
 
-    Note over App: cron-job.org pings every 10 min during the active window
+    Note over App: cron-job.org pings every 10 min, 24/7
 
     Render->>App: GET /health
     App->>DB: SELECT 1
@@ -646,19 +645,18 @@ sequenceDiagram
     participant Cron as cron-job.org
     participant Render as Render Backend
 
-    Note over Cron: Asia/Kolkata timezone<br/>Every 10 min, 06:00–02:00 IST
+    Note over Cron: Asia/Kolkata timezone<br/>Every 10 min, 24/7 (no sleep window)
 
     Cron->>Render: GET /health
 
     alt Backend awake (normal case)
         Render-->>Cron: 200 {"status":"healthy"}
         Note over Render: 15-min idle timer RESET ✓
-    else Backend was cold (after 02:00–06:00 IST sleep window)
-        Note over Render: Render wakes container (~30–90s)
-        Render-->>Cron: 200 {"status":"healthy"}
+    else Backend was cold (should not happen with 24/7 pings)
+        Note over Render: Render wakes container (~60–90s)<br/>exceeds cron-job.org 30s timeout → ping fails
     end
 
-    Note over Cron,Render: Two jobs cover 06:00–02:00 IST<br/>Sleep window 02:00–06:00 IST saves 4 hrs/day<br/>Monthly: 20h × 30d = 600h used / 750h limit ✅<br/>Buffer: 150 hrs remaining
+    Note over Cron,Render: Single job, 24/7<br/>Monthly: 24h × 31d = 744h used / 750h limit ✅<br/>A nightly sleep window caused daily cold-start failures<br/>and cron-job.org auto-disabled the job after ~25 failures
 
     Note over Render: GitHub Actions keep-backend-warm.yml remains available<br/>for manual wake-up or health checks only; no automatic schedule
 ```
@@ -786,11 +784,12 @@ Frontend         Vercel      Free    Unlimited deployments
 Data Pipeline    GitHub      Free    Actions 2000 min/month
 Groq LLM         Groq        PAYG    Only on cache miss
 
-RENDER HOUR BUDGET (September)
+RENDER HOUR BUDGET (31-day month)
 ═══════════════════════════════
-Backend awake:  20 hrs/day × 30 days = 600 hrs ✅
-Sleep window:   02:00–06:00 IST (4 hrs off daily)
-Buffer:         150 hrs remaining from 750hr limit
+Backend awake:  24 hrs/day × 31 days = 744 hrs ✅
+Sleep window:   none (cold starts exceed cron-job.org's 30s timeout)
+Buffer:         6 hrs remaining from 750hr limit — isa-backend must be
+                the only free Render web service in the workspace
 
 Database note: Production PostgreSQL is hosted on Neon. The Render-managed
 PostgreSQL service is not used and must not be provisioned for production.

@@ -8,6 +8,8 @@ Architecture note:
 """
 from __future__ import annotations
 
+import asyncio
+
 import structlog
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -17,17 +19,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
-from fastapi import Depends
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
-from app.core.dependencies import get_db
 from app.core.exceptions import ApplicationError
 from app.core.logging import setup_logging
 from app.core.middleware import RateLimitMiddleware, RequestLoggingMiddleware
-from app.db.session import init_db, close_db
+from app.db.session import init_db, close_db, get_async_session
 
 setup_logging()
 logger = structlog.get_logger(__name__)
@@ -100,12 +99,23 @@ def create_application() -> FastAPI:
 app = create_application()
 
 
-@app.get("/health", tags=["Infrastructure"])
-async def health_check(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
-    """Ping the DB to keep Neon warm. DB failure is non-fatal — backend stays 'healthy'."""
+HEALTH_DB_TIMEOUT_SECONDS = 5
+
+
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["Infrastructure"])
+async def health_check() -> dict[str, str]:
+    """
+    Ping the DB to keep Neon warm. DB failure is non-fatal — backend stays 'healthy'.
+
+    The session is opened inside the try block (not via Depends) and bounded by a
+    short timeout, so a cold/unreachable Neon can never turn this into a 5xx or
+    hang past uptime-monitor timeouts (cron-job.org aborts after 30s).
+    """
     db_status = "ok"
     try:
-        await db.execute(text("SELECT 1"))
+        async with asyncio.timeout(HEALTH_DB_TIMEOUT_SECONDS):
+            async with get_async_session() as db:
+                await db.execute(text("SELECT 1"))
     except Exception:
         db_status = "warming_up"  # Neon cold start — don't fail the health check
     return {"status": "healthy", "version": settings.APP_VERSION, "db": db_status}
