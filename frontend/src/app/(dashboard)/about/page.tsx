@@ -25,54 +25,51 @@ export default function AboutPage() {
   return (
     <div className="space-y-8">
       {/* ── Founder ───────────────────────────────────────────────────────── */}
-      <section className="rounded-2xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 overflow-hidden">
-        <div className="grid md:grid-cols-[280px_1fr]">
-          <div className="relative aspect-[4/5] md:aspect-auto md:min-h-[350px] bg-gray-100 dark:bg-gray-900">
-            <Image
-              src="/about/imtiyaz.jpg"
-              alt="Imtiyaz, creator of ValuePilotage"
-              fill
-              priority
-              sizes="(min-width: 768px) 280px, 100vw"
-              className="object-cover object-top"
-            />
-          </div>
-
-          <div className="p-6 sm:p-8 flex flex-col justify-center">
-            <div className="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-950 border border-brand-100 dark:border-brand-900 text-brand-700 dark:text-brand-300 text-xs font-medium mb-4">
-              <Sparkles className="w-3 h-3" />
-              About ValuePilotage
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
+      <section className="rounded-2xl border border-gray-100 dark:border-gray-900 bg-white dark:bg-gray-950 p-6 sm:p-8">
+        <div className="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-950 border border-brand-100 dark:border-brand-900 text-brand-700 dark:text-brand-300 text-xs font-medium mb-5">
+          <Sparkles className="w-3 h-3" />
+          About ValuePilotage
+        </div>
+        <div className="flex items-center gap-4">
+          <Image
+            src="/about/imtiyaz.jpg"
+            alt="Imtiyaz, creator of ValuePilotage"
+            width={80}
+            height={80}
+            priority
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-2 ring-brand-100 dark:ring-brand-900 shrink-0"
+          />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
               Hi, I&apos;m Imtiyaz
             </h1>
-            <p className="mt-1 text-sm font-medium text-brand-600 dark:text-brand-400">
+            <p className="mt-0.5 text-sm font-medium text-brand-600 dark:text-brand-400">
               Founder &amp; developer of ValuePilotage
             </p>
-            <div className="mt-5 space-y-3 text-gray-600 dark:text-gray-400 leading-relaxed">
-              <p>
-                I built ValuePilotage because researching an Indian company properly
-                meant jumping between annual reports, exchange filings, screeners and
-                spreadsheets — and still not getting a clear answer to the simple
-                question: <em>is this a good business?</em>
-              </p>
-              <p>
-                ValuePilotage brings that work into one place. It combines ten years of
-                financial data with AI agents that read the numbers the way a research
-                analyst would, and explain business quality, valuation and risk in plain
-                English.
-              </p>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-              >
-                Explore companies
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
           </div>
+        </div>
+        <div className="mt-5 space-y-3 text-gray-600 dark:text-gray-400 leading-relaxed max-w-3xl">
+          <p>
+            I built ValuePilotage because researching an Indian company properly
+            meant jumping between annual reports, exchange filings, screeners and
+            spreadsheets — and still not getting a clear answer to the simple
+            question: <em>is this a good business?</em>
+          </p>
+          <p>
+            ValuePilotage brings that work into one place. It combines ten years of
+            financial data with AI agents that read the numbers the way a research
+            analyst would, and explain business quality, valuation and risk in plain
+            English.
+          </p>
+        </div>
+        <div className="mt-6">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            Explore companies
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </section>
 
